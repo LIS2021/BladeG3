@@ -1,3 +1,5 @@
 Possiamo cambiare la configuration rimuovendo i mutable
 
 Dobbiamo implementare step e eval separatamente?
+
+I valori bottom servono per la speculazione?
