@@ -72,7 +72,7 @@ let conf = {
 };;
 
 let dirs = [Fetch; Fetch; Fetch; Exec 0; Retire; Exec 0; Retire];;
-printOutput (conf1, [], 0);;
+printOutput (conf, [], 0);;
 evalListTest conf dirs;;
 
 
@@ -95,11 +95,7 @@ let conf1 = {
   rho=StringMap.empty
 };;
 
-let dirs1 = [Fetch; Fetch; PFetch(true); Fetch; 
-             Fetch; Fetch; PFetch(true); Fetch; 
-             Fetch; Fetch; PFetch(true); Fetch; 
-             Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; 
-             Exec 0; Retire; Exec 0; Retire; Exec 0; Retire];;
+let dirs1 = [Fetch; Fetch; PFetch(true); Fetch; Fetch; Fetch; PFetch(true); Fetch; Fetch; Fetch; PFetch(true); Fetch; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire];;
 
 printOutput (conf1, [], 0);;
 evalListTest conf1 dirs1;;
