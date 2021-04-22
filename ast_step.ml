@@ -197,7 +197,8 @@ let stepFetch (conf: configuration) (obs : observation list) (count : int) : con
         | ArrAssign(a, e1, e2) :: cs ->
             let e = BinOp(e1, Length(Cst(CstA(a))), Lt) in
             let e' = BinOp(Base(Cst(CstA(a))), e1, Add) in
-            let c' = If(e, (PtrAssign(e', e, a.label)), Fail) in
+            let c' = If(e, (PtrAssign(e', e2, a.label)), Fail) in
+        (*  let c' = If(e, (PtrAssign(e', e, a.label)), Fail) in  *)
             {conf with cs = c' :: cs}, None :: obs, count + 1
         | While(e, c) :: cs ->
             let c1 = Seq(c, While(e, c)) in
@@ -296,19 +297,20 @@ let eval (conf : configuration) (attacker : configuration -> observation list ->
         | None -> conf, obs, count
    in helper conf attacker [] 0;;
 
-let evalList (conf : configuration) (attacker : directive list) : configuration * observation list * int =
+let evalList' (conf : configuration) (attacker : directive list) (injector : (configuration * observation list * int) -> unit) : configuration * observation list * int =
   let rec helper conf attacker obs count =
     match attacker with
         | [] -> conf, obs, count
         | d :: ds -> (match step conf d obs count with
-                          | Some(conf', obs', count') -> helper conf' ds obs' count'
+                          | Some(conf', obs', count') -> 
+                                  injector(conf', obs', count');
+                                  helper conf' ds obs' count'
                           | None -> conf, obs, count)
    in helper conf attacker [] 0;;
 
 
-let conf = {is=[]; cs=[Seq(VarAssign("x", Expr(Cst(CstI(0)))), VarAssign("y", Expr(BinOp(Var("x"), Cst(CstI(1)), Add))))]; mu=[||]; rho=StringMap.empty};;
+let evalList (conf : configuration) (attacker : directive list) : configuration * observation list * int =
+    evalList' conf attacker (fun _ -> ());;
 
-(* EXAMPLES *)
-(* step conf Fetch [] 0;; *)
-(* eval conf (fun _ -> Fetch);; *)
-(* evalList conf [Fetch; Fetch; Fetch; Exec 0; Retire; Exec 0; Retire];; *)
+
+
