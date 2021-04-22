@@ -86,7 +86,7 @@ let conf1 = {
       Seq( ArrAssign(a1, Cst(CstI(1)), Cst(CstI(2))), 
       Seq( ArrAssign(b1, Cst(CstI(3)), Cst(CstI(42))), 
       Seq( VarAssign("x", ArrayRead(a1, Cst(CstI(0)))), 
-      Seq( VarAssign("y", ArrayRead(a1, Cst(CstI(0)))), 
+      Seq( VarAssign("y", ArrayRead(a1, Cst(CstI(1)))), 
       Seq( VarAssign("z", Expr(BinOp(Var("x"), Var("y"), Add))), 
            VarAssign("w", ArrayRead(b1, Var("z"))) 
       ))))))
