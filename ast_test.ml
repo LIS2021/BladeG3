@@ -56,7 +56,9 @@ let printOutput ((conf : configuration), (obs : observation list), (count : int)
     printf "count : %d\n\n" count;;
 
 let evalListTest conf attacker = evalList' conf attacker printOutput;;
-(*
+
+
+
 let conf = {
     is=[]; 
     cs=[
@@ -72,7 +74,8 @@ let conf = {
 let dirs = [Fetch; Fetch; Fetch; Exec 0; Retire; Exec 0; Retire];;
 printOutput (conf1, [], 0);;
 evalListTest conf dirs;;
-*)
+
+
 
 let a1 = { base=0 ; length=4 ; label=() };;
 let b1 = { base=10 ; length=5 ; label=() };; 
@@ -92,7 +95,11 @@ let conf1 = {
   rho=StringMap.empty
 };;
 
-let dirs1 = [Fetch; Fetch; PFetch(true); Fetch; Fetch; Fetch; PFetch(true); Fetch; Fetch; Fetch; PFetch(true); Fetch; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; Exec 0; Retire];;
+let dirs1 = [Fetch; Fetch; PFetch(true); Fetch; 
+             Fetch; Fetch; PFetch(true); Fetch; 
+             Fetch; Fetch; PFetch(true); Fetch; 
+             Exec 0; Retire; Exec 0; Retire; Exec 0; Retire; 
+             Exec 0; Retire; Exec 0; Retire; Exec 0; Retire];;
 
 printOutput (conf1, [], 0);;
 evalListTest conf1 dirs1;;
