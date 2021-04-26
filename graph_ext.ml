@@ -23,7 +23,19 @@ module type Graph = sig
 
     val neighbours : 'a graph -> node -> node list
 
+    val copy : 'a graph -> 'a graph
+
+    (*
     val bfs : 'a graph -> (node -> unit) -> unit
+
+    val bfs_fp : 'a graph -> ('a graph * int array)
+
+    val max_flow : 'a graph -> int array -> int
+
+    val update_graph : 'a graph -> int array -> int -> 'a graph * int
+    *)
+
+    val edmonds_karp : 'a graph -> ('a graph * int list)
 end
 
 module UseGraph : Graph = struct
@@ -56,7 +68,7 @@ module UseGraph : Graph = struct
     let print_graph (g : 'a graph) : unit = 
         let helper i = (fun j n ->
             if n <> 0 then
-                Printf.printf "([%d;%d]: %d) " i j n) in
+                Printf.printf "([%d -> %d]: %d) " i j n) in
         let outer_iter (i : int) (a : int array) : unit = Array.iteri (helper i) a in 
         Array.iteri outer_iter g.m
 
@@ -75,6 +87,11 @@ module UseGraph : Graph = struct
             if n > 0 then i else (-1) in
         Array.fold_left folder [] (Array.mapi mapier src)
 
+    let copy (g : 'a graph) : 'a graph =
+        let maper (a : int array) : int array = Array.copy a in
+        let m' = Array.map maper g.m in
+        { m = m' }
+
     let size (g : 'a graph) : int =
         Array.length g.m
 
@@ -91,6 +108,62 @@ module UseGraph : Graph = struct
                             helper (vs @ nb) g
                 | [] -> () in
         helper [source g] g
+
+    let bfs_sp (g : 'a graph) : ('a graph * int array) =
+        let pred = Array.make (size g) (-1) in
+        let rec iter_nb (v : node) (nbs : node list) (stack : node list) : node list = 
+            match nbs with
+                | nb :: nbs' -> 
+                        if pred.(nb) = (-1) && nb <> 0 then
+                            (pred.(nb) <- v;
+                            iter_nb v nbs' (stack @ [nb]))
+                        else 
+                            iter_nb v nbs' stack
+                | [] -> stack in
+        let rec helper (stack : node list) (g : 'a graph) : ('a graph * int array) =
+            match stack with
+                | v :: vs -> 
+                        let stack' = iter_nb v (neighbours g v) vs in
+                        helper stack' g
+                | [] -> (g, pred) in
+        helper [source g] g
+
+    let max_flow (g : 'a graph) (pred: int array) : int =
+        let rec folder (max : int) ((v1, v2) : (int * int)) : int =
+            if v1 = (-1) then max
+            else 
+                let cap = capacity g (v1, v2) in
+                let max' = if cap < max then cap else max in
+                folder max' (pred.(v1), v1) in
+        let fe = (pred.(sink g), sink g) in
+        folder (capacity g fe) fe
+
+    let update_graph (g : 'a graph) (pred : int array) (max : int) : ('a graph * int) =
+        let rec updater (g : 'a graph) ((v1, v2) : (int * int)) (cut : int) : ('a graph * int) =
+            if v1 = (-1) then (g, cut) 
+            else 
+                let cap = capacity g (v1, v2) in
+                let g' = set_edge g (v1, v2) (cap - max) in
+                let cut' = if (cap - max) = 0 && cut = (-1) then v2 else cut in
+                updater g' (pred.(v1), v1) cut' in
+        updater g (pred.(sink g), sink g) (-1)
+
+    let edmonds_karp (g : 'a graph) : ('a graph * int list) =
+        let g' = copy g in
+        let rec add_absent (cuts : int list) (c : int) : (int list) =
+            match cuts with
+                | v :: vs -> 
+                        if v = c then v :: vs
+                        else v :: (add_absent vs c)
+                | [] -> [ c ] in
+        let rec helper (g : 'a graph) (cuts : int list) : ('a graph * int list) = 
+            let (g, pred) = bfs_sp g in
+            match pred.(sink g) with
+                | (-1) -> (g, cuts)
+                | _    -> let max = max_flow g pred in
+                          let (g, c) = update_graph g pred max in
+                          helper g (add_absent cuts c) in
+        helper g' []
 
 end
 
