@@ -1,85 +1,4 @@
-open Format
-
-module StringMap = Map.Make(String)
-
-type identifier = string;;
-
-type op =
-  | Add
-  | Lte
-  | Lt
-  | BitAnd;;
-
-type label = unit;;
-
-type arr = {
-  base : int;
-  length : int;
-  label : label;
-};;
-
-type value =
-  | CstI of int
-  | CstB of bool
-  | CstA of arr;;
-
-type expr =
-  | Cst of value
-  | Var of identifier
-  | BinOp of expr * expr * op
-  | InlineIf of expr * expr * expr
-  | Length of expr
-  | Base of expr;;
-
-type rhs =
-  | Expr of expr
-  | PtrRead of expr * label
-  | ArrayRead of arr * expr;;
-
-type protect = Slh | Fence | Auto;;
-
-type cmd =
-  | Skip
-  | Fail
-  | VarAssign of identifier * rhs
-  | PtrAssign of expr * expr * label
-  | ArrAssign of arr * expr * expr
-  | Seq of cmd * cmd
-  | If of expr * cmd * cmd
-  | While of expr * cmd
-  | Protect of identifier * protect * rhs;;
-
-(** 		DIRECTIVES 		**)
-type prediction = bool
-
-type directive =
-  | Fetch
-  | PFetch of prediction
-  | Exec of int
-  | Retire
-
-type guard_fail_id = int;;
-
-(** 		OBSERVATIONS 		**)
-type observation =
-  | None
-  | Read of int * int list
-  | Write of int * int list
-  | OFail of guard_fail_id
-  | Rollback of int
-
-(**		INSTRUCTION SET		**)
-type instruction =
-  | Nop
-  | AssignE of identifier * expr
-  | AssignV of identifier * value
-  | Load of identifier * label * expr 			(* 	id := load(e) 		*)
-  | StoreE of expr * expr
-  | StoreV of int * int
-  | IProtectE of identifier * protect * expr 	(* 	id := protect(e) 	*)
-  | IProtectV of identifier * value 	(* 	id := protect(v) 	*)
-  | Guard of expr * prediction * cmd list * guard_fail_id
-  | Fail of guard_fail_id ;;
+open Ast
 
 (**		CONFIGURATIONS 		**)
 type configuration = {
@@ -173,7 +92,7 @@ let rec pending (is : instruction list) : guard_fail_id list =
   match is with
       | []                       -> []
       | Guard(e, b, cs, p) :: is -> p :: pending is
-      | Fail(p) :: is            -> p :: pending is
+      | IFail(p) :: is            -> p :: pending is
       | i :: is                  -> pending is;;
 
 
@@ -212,7 +131,7 @@ let stepFetch (conf: configuration) (obs : observation list) (count : int) : (co
         | Skip :: cs ->
             pure ({conf with cs = cs}, None :: obs, count + 1)
         | Fail :: cs ->
-            pure ({conf with cs = cs; is = conf.is @ [Fail(count)]}, None :: obs, count + 1)
+            pure ({conf with cs = cs; is = conf.is @ [IFail(count)]}, None :: obs, count + 1)
         | VarAssign(x, Expr(e)) :: cs ->
             pure ({conf with cs = cs; is = conf.is @ [AssignE(x, e)]}, None :: obs, count + 1)
         | Seq(c1, c2) :: cs ->
@@ -307,7 +226,7 @@ let stepRetire (conf: configuration) (obs : observation list) (count : int) : (c
       | AssignV(x, v) :: is -> pure ({conf with is = is; rho = StringMap.add x v conf.rho}, None :: obs, count + 1)
       | StoreV(n, v) :: is  -> conf.mu.(n) <- v;
                                pure ({conf with is = is}, None :: obs, count + 1)
-      | Fail(p) :: is       -> pure ({conf with is = []; cs = []}, OFail p :: obs, count + 1)
+      | IFail(p) :: is       -> pure ({conf with is = []; cs = []}, OFail p :: obs, count + 1)
       | _ -> err (InvalidDirective Retire);;
 
 let step (conf: configuration) (dir : directive) (obs : observation list) (count : int) : (configuration * observation list * int) vmresult =
@@ -347,7 +266,7 @@ let defaultSpeculator (dist : unit -> bool) (conf : configuration) (obs : observ
     | Nop :: _, _           -> Retire
     | AssignV(_, _) :: _, _ -> Retire
     | StoreV(_, _) :: _, _  -> Retire
-    | Fail(_) :: _, _       -> Retire
+    | IFail(_) :: _, _       -> Retire
     | _ :: _, _             -> Exec 0
     | _, _                  -> Fetch;;
 
