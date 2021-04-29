@@ -2,42 +2,42 @@
 module type Graph = sig
 
     type node
-    type 'a graph
+    type graph
     type edge = node * node
 
-    val empty : unit -> 'a graph
+    val empty : unit -> graph
 
-    val add : 'a graph -> ('a graph * node)
+    val add : graph -> (graph * node)
 
-    val set_edge : 'a graph -> edge -> int -> 'a graph
+    val set_edge : graph -> edge -> int -> graph
 
-    val capacity : 'a graph -> edge -> int
+    val capacity : graph -> edge -> int
 
-    val print_graph : 'a graph -> unit
+    val print_graph : graph -> unit
 
     val print_nodes : node list -> unit
 
     val str_node : node -> string
 
-    val source : 'a graph -> node
+    val source : graph -> node
 
-    val sink : 'a graph -> node
+    val sink : graph -> node
 
-    val neighbours : 'a graph -> node -> node list
+    val neighbours : graph -> node -> node list
 
-    val copy : 'a graph -> 'a graph
+    val copy : graph -> graph
 
     (*
-    val bfs : 'a graph -> (node -> unit) -> unit
+    val bfs : graph -> (node -> unit) -> unit
 
-    val bfs_fp : 'a graph -> ('a graph * int array)
+    val bfs_fp : graph -> (graph * int array)
 
-    val max_flow : 'a graph -> int array -> int
+    val max_flow : graph -> int array -> int
 
-    val update_graph : 'a graph -> int array -> int -> 'a graph * int
+    val update_graph : graph -> int array -> int -> graph * int
     *)
 
-    val edmonds_karp : 'a graph -> ('a graph * node list)
+    val edmonds_karp : graph -> (graph * node list)
 
     val filter_assoc : (node * 'b) list -> node list -> 'b list
 
@@ -46,15 +46,15 @@ end
 module UseGraph : Graph = struct
     type node = int
     type matrix = int array array
-    type 'a graph = {
+    type graph = {
         m : matrix
     }
     type edge = node * node
 
-    let empty (() : unit) : 'a graph =
+    let empty (() : unit) : graph =
         { m = [| [| 0 ; 0 |] ; [| 0 ; 0 |] |] }
 
-    let add (g : 'a graph) : ('a graph * node) =
+    let add (g : graph) : (graph * node) =
         let append_node ( a : int array ) = Array.append a [| 0 |] in
         let osz (m : int array array) : int = Array.length m in
         let append_all (m : int array array) = Array.map append_node m in
@@ -62,13 +62,13 @@ module UseGraph : Graph = struct
             Array.append m [| (Array.make ((osz g.m) + 1) 0) |] in
         ({ m = add_array (append_all g.m) }, (osz g.m) )
 
-    let set_edge (g : 'a graph) ((n1, n2) : edge) (c : int) : 'a graph =
+    let set_edge (g : graph) ((n1, n2) : edge) (c : int) : graph =
         g.m.(n1).(n2) <- c; g
 
-    let capacity (g : 'a graph) ((n1, n2) : edge) : int =
+    let capacity (g : graph) ((n1, n2) : edge) : int =
         g.m.(n1).(n2)
 
-    let print_graph (g : 'a graph) : unit = 
+    let print_graph (g : graph) : unit = 
         let helper i = (fun j n ->
             if n <> 0 then
                 Printf.printf "([%d -> %d]: %d) " i j n) in
@@ -84,11 +84,11 @@ module UseGraph : Graph = struct
     let str_node (n : node) : string =
         Printf.sprintf "%d" n
 
-    let source (g : 'a graph) : node = 0
+    let source (g : graph) : node = 0
 
-    let sink (g : 'a graph) : node = 1
+    let sink (g : graph) : node = 1
 
-    let neighbours (g : 'a graph) (n : node) : node list =
+    let neighbours (g : graph) (n : node) : node list =
         let src = g.m.(n) in
         let folder (it : node list) (v : node) : node list = 
             if v >= 0 then v :: it else it in
@@ -96,17 +96,17 @@ module UseGraph : Graph = struct
             if n <> 0 then i else (-1) in
         Array.fold_left folder [] (Array.mapi mapier src)
 
-    let copy (g : 'a graph) : 'a graph =
+    let copy (g : graph) : graph =
         let maper (a : int array) : int array = Array.copy a in
         let m' = Array.map maper g.m in
         { m = m' }
 
-    let size (g : 'a graph) : int =
+    let size (g : graph) : int =
         Array.length g.m
 
-    let bfs (g : 'a graph) (action : node -> unit) : unit =
+    let bfs (g : graph) (action : node -> unit) : unit =
         let color = Array.make (size g) 0 in
-        let rec helper (stack : node list) (g : 'a graph) =
+        let rec helper (stack : node list) (g : graph) =
             match stack with
                 | v :: vs -> 
                         if color.(v) == 1 then helper vs g
@@ -118,7 +118,7 @@ module UseGraph : Graph = struct
                 | [] -> () in
         helper [source g] g
 
-    let bfs_sp (g : 'a graph) : ('a graph * node array) =
+    let bfs_sp (g : graph) : (graph * node array) =
         let pred = Array.make (size g) (-1) in
         let rec iter_nb (v : node) (nbs : node list) (stack : node list) : node list = 
             match nbs with
@@ -129,7 +129,7 @@ module UseGraph : Graph = struct
                         else 
                             iter_nb v nbs' stack
                 | [] -> stack in
-        let rec helper (stack : node list) (g : 'a graph) : ('a graph * node array) =
+        let rec helper (stack : node list) (g : graph) : (graph * node array) =
             match stack with
                 | v :: vs -> 
                         let stack' = iter_nb v (neighbours g v) vs in
@@ -153,7 +153,7 @@ module UseGraph : Graph = struct
             | _ ,  _  -> (a - b)
 
 
-    let max_flow (g : 'a graph) (pred: node array) : int =
+    let max_flow (g : graph) (pred: node array) : int =
         let rec folder (max : int) ((v1, v2) : (node * node)) : int =
             if v1 = (-1) then max
             else 
@@ -163,8 +163,8 @@ module UseGraph : Graph = struct
         let fe = (pred.(sink g), sink g) in
         folder (capacity g fe) fe
 
-    let update_graph (g : 'a graph) (pred : node array) (max : int) : ('a graph * node) =
-        let rec updater (g : 'a graph) ((v1, v2) : (node * node)) (cut : node) : ('a graph * node) =
+    let update_graph (g : graph) (pred : node array) (max : int) : (graph * node) =
+        let rec updater (g : graph) ((v1, v2) : (node * node)) (cut : node) : (graph * node) =
             if v1 = (-1) then (g, cut) 
             else 
                 let cap = capacity g (v1, v2) in
@@ -173,7 +173,7 @@ module UseGraph : Graph = struct
                 updater g' (pred.(v1), v1) cut' in
         updater g (pred.(sink g), sink g) (-1)
 
-    let edmonds_karp (g : 'a graph) : ('a graph * node list) =
+    let edmonds_karp (g : graph) : (graph * node list) =
         let g' = copy g in
         let rec add_absent (cuts : node list) (c : node) : (node list) =
             match cuts with
@@ -181,7 +181,7 @@ module UseGraph : Graph = struct
                         if v = c then v :: vs
                         else v :: (add_absent vs c)
                 | [] -> [ c ] in
-        let rec helper (g : 'a graph) (cuts : node list) : ('a graph * node list) = 
+        let rec helper (g : graph) (cuts : node list) : (graph * node list) = 
             let (g, pred) = bfs_sp g in
             match pred.(sink g) with
                 | (-1) -> (g, cuts)

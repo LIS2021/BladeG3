@@ -1,4 +1,5 @@
 (* This file contains definitions depending on functions defined in ast_stemp.ml *)
+open Printf
 
 let strArr (a : arr) =
     sprintf "[%d ~ %d]" a.base (a.base + a.length);;
@@ -49,7 +50,7 @@ let strInstr (instr : instruction) =
         | IProtectE(x,p,e) -> sprintf "IProtectE(%s, %s, %s)" x (strProt p) (strExpr e)
         | IProtectV(x,v)   -> sprintf "IProtectV(%s, %s)" x (strValue v)
         | Guard(e,p,cl,id) -> sprintf "Guard(%s, %B, cs', %d)" (strExpr e) p id
-        | Fail(id)         -> sprintf "Fail(%d)" id;;
+        | IFail(id)         -> sprintf "Fail(%d)" id;;
 
 let strCmd (c : cmd) = 
     let rec helper (c1 : cmd) = match c1 with

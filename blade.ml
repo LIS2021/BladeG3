@@ -1,10 +1,14 @@
-open Ast
 open Graph
 open Def_use_gen
 
+module H = HashTableGen
+module G = UseGraph
+ 
 module type IBlade = sig
 
-    val Blade cmd -> cmd
+    val blade : cmd -> cmd
+
+    val protect_cmd : cmd -> identifier list -> cmd
 
 end
 
@@ -25,7 +29,14 @@ module Blade : IBlade = struct
             | While(e, c) -> While(e, protect_cmd c lprot)
             | Protect(id, p, r) -> c
 
-    let Blade (c : cmd) : cmd = protect_cmd c []
+    let blade (c : cmd) : cmd = 
+        let gen = H.new_gen () in
+        let gen = H.populate_graph gen c 1 in
+        let g = H.get_graph gen in
+        let (_, cut) = G.edmonds_karp g in
+        let pairs = H.get_pairs gen in
+        let lprot = G.filter_assoc pairs cut in
+        protect_cmd c lprot 
 
 end
 
