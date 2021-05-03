@@ -21,7 +21,7 @@ module Blade : IBlade = struct
             | Fail -> Fail
             | VarAssign(id, r) -> 
                 let p = (match r with
-                    | ArrayRead(a, e) -> Slh
+                    | ArrayRead(_, _) -> Slh
                     | _ -> Fence) in
                 (match List.find_opt (fun s -> s = id) lprot with
                     | Some(_) -> Protect(id, p, r)
@@ -34,11 +34,10 @@ module Blade : IBlade = struct
             | Protect(id, p, r) -> c
 
     let blade (c : cmd) : cmd = 
-        let gen = H.new_gen () in
-        let gen = H.populate_graph gen c 1 in
+        let gen = H.populate_graph c in
         let g = H.get_graph gen in
-        let (_, cut) = G.edmonds_karp g in
         let pairs = H.get_pairs gen in
+        let (_, cut) = G.edmonds_karp g in
         let lprot = G.filter_assoc pairs cut in
         protect_cmd c lprot 
 

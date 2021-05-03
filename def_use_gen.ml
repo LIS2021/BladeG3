@@ -68,7 +68,10 @@ module HashTableGen : DefUseGen = struct
         gen.g <- g; node
 
   (* template cost function *)
-  let cost_f (cost : int) : int = cost
+  let cost_f (c : cmd) (cost : int) : int =
+    match c with
+      | While(_, _) -> cost + 10
+      | _ -> cost
  
   let rec populate_graph_exp (gen: generated) (e: expr) (cost: int) : node =
     match e with
@@ -124,47 +127,48 @@ module HashTableGen : DefUseGen = struct
           gen.g <- G.set_edge gen.g (n, sink) (-1);
           r_node
 
-  let rec populate_graph (gen: generated) (c: cmd) (cost: int) : generated = 
+  let rec populate_graph (c: cmd) : generated = 
     let sink = G.sink gen.g in
-    match c with 
-      | Fail -> gen
-      | Skip -> gen
-      | VarAssign (id, rhs) ->
-          let id_node = new_node gen (NVar id) in
-          let rhs_node = populate_graph_rhs gen rhs cost in
-          gen.g <- G.set_edge gen.g (rhs_node, id_node) (cost_f cost);
-          gen.pairs <- (id_node, id) :: gen.pairs;
-          gen
-      | PtrAssign (e1, e2, l) ->
-          let ptr = populate_graph_exp gen e1 cost in
-          let _ = populate_graph_exp gen e2 cost in
-          gen.g <- G.set_edge gen.g (ptr, sink) (-1);
-          gen
-      | ArrAssign (a, e1, e2) ->
-          let _ = populate_graph_exp gen e1 cost in
-          let index = populate_graph_exp gen e2 cost in
-          gen.g <- G.set_edge gen.g (index, sink) (-1);
-          gen
-      | Seq (c1, c2) -> 
-          let gen = populate_graph gen c1 cost in
-          let gen = populate_graph gen c2 cost in 
-          gen
-      | If (e, c1, c2) ->
-          let gen = populate_graph gen c1 cost in
-          let gen = populate_graph gen c2 cost in
-          let cond_node = populate_graph_exp gen e cost in
-          gen.g <- G.set_edge gen.g (cond_node, sink) (-1);
-          gen
-      | While (e, c) ->
-          (* increase cost in cmds in a while block *)
-          let n_cost = cost + 10 in
-          let gen = populate_graph gen c n_cost in
-          let cond_node = populate_graph_exp gen e cost in 
-          gen.g <- G.set_edge gen.g (cond_node, sink) (-1);
-          gen
-      | Protect (id, p, rhs) ->
-          let _ = populate_graph_rhs gen rhs cost in
-          gen
+    let helper (gen: generated) (c: cmd) (cost: int) : generated =
+      match c with 
+        | Fail -> gen
+        | Skip -> gen
+        | VarAssign (id, rhs) ->
+            let id_node = new_node gen (NVar id) in
+            let rhs_node = populate_graph_rhs gen rhs cost in
+            gen.g <- G.set_edge gen.g (rhs_node, id_node) cost;
+            gen.pairs <- (id_node, id) :: gen.pairs;
+            gen
+        | PtrAssign (e1, e2, l) ->
+            let ptr = populate_graph_exp gen e1 cost in
+            let _ = populate_graph_exp gen e2 cost in
+            gen.g <- G.set_edge gen.g (ptr, sink) (-1);
+            gen
+        | ArrAssign (a, e1, e2) ->
+            let _ = populate_graph_exp gen e1 cost in
+            let index = populate_graph_exp gen e2 cost in
+            gen.g <- G.set_edge gen.g (index, sink) (-1);
+            gen
+        | Seq (c1, c2) -> 
+            let gen = helper gen c1 (cost_f c cost) in
+            let gen = helper gen c2 cost in 
+            gen
+        | If (e, c1, c2) ->
+            let gen = helper gen c1 (cost_f c cost) in
+            let gen = helper gen c2 (cost_f c cost) in
+            let cond_node = populate_graph_exp gen e cost in
+            gen.g <- G.set_edge gen.g (cond_node, sink) (-1);
+            gen
+        | While (e, c) ->
+            let gen = helper gen c (cost_f c cost) in
+            let cond_node = populate_graph_exp gen e cost in 
+            gen.g <- G.set_edge gen.g (cond_node, sink) (-1);
+            gen
+        | Protect (id, p, rhs) ->
+            let _ = populate_graph_rhs gen rhs cost in
+            gen in
+    let gen = new_gen () in
+    helper gen cmd 1
 
   let print_generated (gen : generated) : unit =
     let strNt (nt : node_type) : string =
