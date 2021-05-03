@@ -1,6 +1,8 @@
+open Ast
 open Def_use_gen
 open Graph
 open Blade
+open Utils
 
 module H = HashTableGen
 module G = UseGraph
@@ -15,8 +17,11 @@ let c =   Seq( ArrAssign(a1, Cst(CstI(0)), Cst(CstI(1))),
           Seq( VarAssign("y", ArrayRead(a1, Cst(CstI(1)))), 
           Seq( VarAssign("z", Expr(BinOp(Var("x"), Var("y"), Add))), 
                VarAssign("w", ArrayRead(b1, Var("z"))) 
-          ))))))
+))))));;
  
+Printf.printf "Original code: \n";;
+Printf.printf "%s\n" (strCmd c);;
+(*
 let gen = H.new_gen ();;
 H.populate_graph gen c 1;;
 
@@ -31,9 +36,12 @@ let pairs = H.get_pairs gen;;
 let lprot = G.filter_assoc pairs cut;;
 
 let c' = B.protect_cmd c lprot;;
+*)
 
 let c'' = B.blade c ;;
 
+Printf.printf "Result code: \n";;
+Printf.printf "%s\n" (strCmd c'');;
 
 
 

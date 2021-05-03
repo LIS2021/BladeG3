@@ -1,4 +1,4 @@
-(* open Ast *)
+open Ast
 open Graph
 
 (* TODO add function for different costs for branches *)

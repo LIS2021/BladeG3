@@ -1,5 +1,7 @@
 (* This file contains definitions depending on functions defined in ast_stemp.ml *)
 open Printf
+open Ast
+open Evaluator
 
 let strArr (a : arr) =
     sprintf "[%d ~ %d]" a.base (a.base + a.length);;

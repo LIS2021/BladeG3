@@ -1,3 +1,4 @@
+open Ast
 open Graph
 open Def_use_gen
 
@@ -19,9 +20,12 @@ module Blade : IBlade = struct
             | Skip -> Skip
             | Fail -> Fail
             | VarAssign(id, r) -> 
-                    (match List.find_opt (fun s -> s = id) lprot with
-                        | Some(_) -> Protect(id, Auto, r)
-                        | None -> c)
+                let p = (match r with
+                    | ArrayRead(a, e) -> Slh
+                    | _ -> Fence) in
+                (match List.find_opt (fun s -> s = id) lprot with
+                    | Some(_) -> Protect(id, p, r)
+                    | None -> c)
             | PtrAssign(e1, e2, l) -> c
             | ArrAssign(a, e1, e2) -> c
             | Seq(c1, c2) -> Seq(protect_cmd c1 lprot, protect_cmd c2 lprot)
