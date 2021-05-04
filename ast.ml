@@ -93,17 +93,17 @@ type cmd =
 
 let string_of_cmd =
   let rec helper (indent : int) (c : cmd) =
-    let s = match c with
-              | Skip -> "skip"
-              | Fail -> "fail"
-              | VarAssign (x, r) -> Printf.sprintf "%s := %s" x (string_of_rhs r)
-              | PtrAssign (e1, e2, _) -> Printf.sprintf "*%s := %s" (string_of_expr e1) (string_of_expr e2)
-              | ArrAssign (a, e1, e2) -> Printf.sprintf "%s[%s] := %s" (string_of_arr a) (string_of_expr e1) (string_of_expr e2)
-              | Seq (c1, c2) -> Printf.sprintf "%s;\n%s" (helper indent c1) (helper indent c2)
-              | If (e, c1, c2) -> Printf.sprintf "(if %s then\n%s\nelse\n%s)" (string_of_expr e) (helper (indent + 2) c1) (helper (indent + 2) c2)
-              | While (e, c1) -> Printf.sprintf "(while %s do\n%s)" (string_of_expr e) (helper (indent + 2) c1)
-              | Protect (x, p, r) -> Printf.sprintf "%s := protect_%s(%s)" x (string_of_protect p) (string_of_rhs r) in
-    String.make indent ' ' ^ s
+    let spaces = String.make indent ' ' in
+    match c with
+      | Skip -> Printf.sprintf "%sskip" spaces
+      | Fail -> Printf.sprintf "%sfail" spaces
+      | VarAssign (x, r) -> Printf.sprintf "%s%s := %s" spaces x (string_of_rhs r)
+      | PtrAssign (e1, e2, _) -> Printf.sprintf "%s*%s := %s" spaces (string_of_expr e1) (string_of_expr e2)
+      | ArrAssign (a, e1, e2) -> Printf.sprintf "%s%s[%s] := %s" spaces (string_of_arr a) (string_of_expr e1) (string_of_expr e2)
+      | Seq (c1, c2) -> Printf.sprintf "%s;\n%s" (helper indent c1) (helper indent c2)
+      | If (e, c1, c2) -> Printf.sprintf "%s(if %s then\n%s\nelse\n%s)" spaces (string_of_expr e) (helper (indent + 2) c1) (helper (indent + 2) c2)
+      | While (e, c1) -> Printf.sprintf "%s(while %s do\n%s)" spaces (string_of_expr e) (helper (indent + 2) c1)
+      | Protect (x, p, r) -> Printf.sprintf "%s%s := protect_%s(%s)" spaces x (string_of_protect p) (string_of_rhs r)
    in helper 0
 
 (** 		DIRECTIVES 		**)
