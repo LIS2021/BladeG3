@@ -269,15 +269,23 @@ let step (conf: configuration) (dir : directive) (obs : observation list) (cost 
       | _, _, Exec(n)   -> updateCost (Exec n) (stepExec conf obs n)
       | _, _, Retire    -> updateCost Retire (stepRetire conf obs);;
 
-let eval (conf : configuration) (speculator : (module Speculator)) (model : (module CostModel)) : (configuration * observation list * int) vmresult =
+let eval' (conf : configuration) (speculator : (module Speculator)) (model : (module CostModel)) (injector : (configuration * observation list * int) -> unit) : (configuration * observation list * int) vmresult =
   let module S = (val speculator : Speculator) in
   let module C = (val model : CostModel) in
   let rec helper conf speculator obs count =
     match step conf (S.speculate conf obs) obs C.cost count with
-      | Ok (conf', obs', count') -> helper conf' speculator obs' count'
+      | Ok (conf', obs', count') -> injector(conf', obs', count');
+                                    helper conf' speculator obs' count'
       | Error EndOfStream -> pure (conf, obs, count)
       | Error e -> err e
    in helper conf speculator [] 0;;
+
+let eval (conf : configuration) (speculator : (module Speculator)) (model : (module CostModel)) : (configuration * observation list * int) vmresult =
+  eval' conf speculator model (fun _ -> ())
+
+let evalWithTrace (out : out_channel) (conf : configuration) (speculator : (module Speculator)) (model : (module CostModel)) : (configuration * observation list * int) vmresult =
+  eval' conf speculator model (fun _ -> ())
+  (* output_string out ... *)
 
 let evalList' (conf : configuration) (speculator : directive list) (injector : (configuration * observation list * int) -> unit) (cost : directive -> configuration -> int) : (configuration * observation list * int) vmresult=
   let rec helper conf speculator obs count =
@@ -336,8 +344,8 @@ module SimpleCost : CostModel = struct
             | Ok (_, IProtectE(_, Fence, _), _) -> 5
             | Ok (_, Load _, _) -> 10
             | _ -> 1)
-      | Retire, {is = i :: _; cs; mu; rho} -> 
-          (match i with 
+      | Retire, {is = i :: _; cs; mu; rho} ->
+          (match i with
             | Nop -> 0
             | StoreV _ -> 10
             | _ -> 1)
