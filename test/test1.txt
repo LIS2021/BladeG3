@@ -5,5 +5,5 @@ y := {0,10}[x];
 x := x + 1);
 z := y;
 
-if z then skip else skip
+if z then skip; skip else skip
 

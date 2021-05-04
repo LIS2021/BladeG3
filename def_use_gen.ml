@@ -4,7 +4,6 @@ open Graph
 (* TODO add function for different costs for branches *)
 
 module G = UseGraph
-
 (* Possible types of the nodes of the def-use graph *)
 type node_type =
   | NVar of string
@@ -67,12 +66,6 @@ module HashTableGen : DefUseGen = struct
         Hashtbl.add gen.hasht node_name node;
         gen.g <- g; node
 
-  (* template cost function *)
-  let cost_f (c : cmd) (cost : int) : int =
-    match c with
-      | While(_, _) -> cost + 10
-      | _ -> cost
- 
   let rec populate_graph_exp (gen: generated) (e: expr) (cost: int) : node =
     match e with
       | Cst (v) ->
@@ -127,7 +120,7 @@ module HashTableGen : DefUseGen = struct
           gen.g <- G.set_edge gen.g (n, sink) (-1);
           r_node
 
-  let populate_graph (c: cmd) : generated = 
+  let populate_graph (c: cmd) (cost_f : cmd -> int -> int) (cost_r : cmd -> int -> int) : generated = 
     let rec helper (gen: generated) (c: cmd) (cost: int) : generated =
       let sink = G.sink gen.g in
       match c with 
@@ -136,33 +129,33 @@ module HashTableGen : DefUseGen = struct
         | VarAssign (id, rhs) ->
             let id_node = new_node gen (NVar id) in
             let rhs_node = populate_graph_rhs gen rhs cost in
-            gen.g <- G.set_edge gen.g (rhs_node, id_node) cost;
+            gen.g <- G.set_edge gen.g (rhs_node, id_node) (cost_f c cost);
             gen.pairs <- (id_node, id) :: gen.pairs;
             gen
         | PtrAssign (e1, e2, l) ->
             let ptr = populate_graph_exp gen e1 cost in
             let _ = populate_graph_exp gen e2 cost in
-            gen.g <- G.set_edge gen.g (ptr, sink) (-1);
+            gen.g <- G.set_edge gen.g (ptr, sink) (cost_f c cost);
             gen
         | ArrAssign (a, e1, e2) ->
             let _ = populate_graph_exp gen e1 cost in
             let index = populate_graph_exp gen e2 cost in
-            gen.g <- G.set_edge gen.g (index, sink) (-1);
+            gen.g <- G.set_edge gen.g (index, sink) (cost_f c cost);
             gen
         | Seq (c1, c2) -> 
-            let gen = helper gen c1 (cost_f c cost) in
-            let gen = helper gen c2 (cost_f c cost) in 
+            let gen = helper gen c1 (cost_r c cost) in
+            let gen = helper gen c2 (cost_r c cost) in 
             gen
         | If (e, c1, c2) ->
-            let gen = helper gen c1 (cost_f c cost) in
-            let gen = helper gen c2 (cost_f c cost) in
+            let gen = helper gen c1 (cost_r c cost) in
+            let gen = helper gen c2 (cost_r c cost) in
             let cond_node = populate_graph_exp gen e cost in
-            gen.g <- G.set_edge gen.g (cond_node, sink) (-1);
+            gen.g <- G.set_edge gen.g (cond_node, sink) (cost_f c cost);
             gen
         | While (e, c) ->
-            let gen = helper gen c (cost_f c cost) in
+            let gen = helper gen c (cost_r c cost) in
             let cond_node = populate_graph_exp gen e cost in 
-            gen.g <- G.set_edge gen.g (cond_node, sink) (-1);
+            gen.g <- G.set_edge gen.g (cond_node, sink) (cost_f c cost);
             gen
         | Protect (id, p, rhs) ->
             let _ = populate_graph_rhs gen rhs cost in

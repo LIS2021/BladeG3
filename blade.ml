@@ -5,6 +5,43 @@ open Def_use_gen
 module H = HashTableGen
 module G = UseGraph
  
+module type WeightModel = sig
+
+    val cost_f : cmd -> int -> int
+
+    val cost_r : cmd -> int -> int
+
+end
+
+module ConstantWeight : WeightModel = struct
+    
+    let cost_f (c : cmd) (oc : int) : int =
+      match c with
+        | VarAssign _ -> oc
+        | _ -> -1
+
+    let cost_r (c : cmd) (oc : int) : int = oc
+
+end
+
+module SimpleWeight : WeightModel = struct
+
+    let cost_f (c : cmd) (oc : int) : int =
+      match c with
+        | VarAssign (_, rhs) -> 
+          match rhs with
+            | ArrayRead _ -> 1
+            | _ -> 5
+        | _ -> -1
+
+    let cost_r (c : cmd) (oc : int) : int =
+      match dir, conf with
+        | While(_, _) -> oc + 10
+        | _ -> oc 
+
+end
+
+
 module type IBlade = sig
 
     val blade : cmd -> cmd
@@ -33,8 +70,9 @@ module Blade : IBlade = struct
             | While(e, c) -> While(e, protect_cmd c lprot)
             | Protect(id, p, r) -> c
 
-    let blade (c : cmd) : cmd = 
-        let gen = H.populate_graph c in
+    let blade (model : (module WeightModel)) (c : cmd) : cmd = 
+        let C = (val model : WeightModel) in
+        let gen = H.populate_graph c C.cost in
         let g = H.get_graph gen in
         let pairs = H.get_pairs gen in
         let (_, cut) = G.edmonds_karp g in

@@ -20,7 +20,7 @@ let () =
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
             | "uniform"
             | _       ->  (module Evaluator.UniformCost : Evaluator.CostModel)) in
-          Printf.printf "ast: %s\n" (Ast.string_of_cmd final_ast);
+          Printf.printf "ast:\n%s\n" (Ast.string_of_cmd final_ast);
           (match Evaluator.eval conf spec cost with
              | Ok (conf', obs, count) -> Printf.printf "count: %d\n" count
              | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
