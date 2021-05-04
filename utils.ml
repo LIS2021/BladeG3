@@ -119,7 +119,7 @@ let printOutput (out : out_channel) ((conf : configuration), (obs : observation 
 
 let evalListTest conf attacker (out : out_channel) = 
     printOutput out (conf, [], 0);
-    evalList' conf attacker (printOutput out);;
+    evalList' conf attacker (printOutput out) Evaluator.UniformCost.cost;;
 
 let evalListPrint conf attacker = 
     evalListTest conf attacker stdout;;

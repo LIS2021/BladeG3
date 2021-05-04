@@ -74,6 +74,11 @@ let isGuard (i : instruction) : bool =
     | Guard(_, _, _, _) -> true
     | _                 -> false;;
 
+let isFence (i : instruction) : bool =
+  match i with
+      | IProtectE(_, Fence, _) -> true
+      | _                    -> false;;
+
 let freshName (name : string) (rho : value StringMap.t) : string =
   let rec helper name rho counter =
     if StringMap.mem (name ^ (string_of_int counter)) rho then
@@ -220,16 +225,19 @@ let stepExec (conf: configuration) (obs : observation list) (n: int): (configura
                else
                  pure ({conf with is = fs @ [Nop]; cs = cls}, Rollback(p) :: obs)
            | Load(x, l, e) ->
-               if List.exists isStore fs then
+               if List.exists (fun i -> (isStore i) || (isFence i)) fs then
                  err (InvalidDirective (Exec n))
                else
                  let* n = evalExpr e rho1 >>= checkInteger in
                  let i' = AssignV(x, CstI(conf.mu.(n))) in
                  pure ({conf with is = fs @ [i'] @ ls}, Read(n, pending fs) :: obs)
            | StoreE(e1, e2) ->
-               let* n = evalExpr e1 rho1 >>= checkInteger in
-               let* v = evalExpr e2 rho1 >>= checkInteger in
-               pure ({conf with is = fs @ [StoreV(n, v)] @ ls}, Write(n, pending fs) :: obs)
+               if List.exists isFence fs then
+                 err (InvalidDirective (Exec n))
+               else
+                 let* n = evalExpr e1 rho1 >>= checkInteger in
+                 let* v = evalExpr e2 rho1 >>= checkInteger in
+                 pure ({conf with is = fs @ [StoreV(n, v)] @ ls}, Write(n, pending fs) :: obs)
            | IProtectE(x, p, e) ->
                let* v = evalExpr e rho1 in
                pure ({conf with is = fs @ [IProtectV(x, v)] @ ls}, None :: obs)
@@ -301,4 +309,7 @@ module UniformCost : CostModel = struct
     match dir, conf with
       | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
       | _, _ -> 1
-end
+end;;
+
+let defaultConfiguration (c : cmd) (size : int) : configuration =
+    {is = []; cs = [c]; mu = Array.make size 0; rho = StringMap.empty};; 

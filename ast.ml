@@ -97,9 +97,9 @@ let rec string_of_cmd = function
   | VarAssign (x, r) -> Printf.sprintf "%s := %s" x (string_of_rhs r)
   | PtrAssign (e1, e2, _) -> Printf.sprintf "*%s := %s" (string_of_expr e1) (string_of_expr e2)
   | ArrAssign (a, e1, e2) -> Printf.sprintf "%s[%s] := %s" (string_of_arr a) (string_of_expr e1) (string_of_expr e2)
-  | Seq (c1, c2) -> Printf.sprintf "%s; %s" (string_of_cmd c1) (string_of_cmd c2)
-  | If (e, c1, c2) -> Printf.sprintf "if %s then %s else %s" (string_of_expr e) (string_of_cmd c1) (string_of_cmd c2)
-  | While (e, c) -> Printf.sprintf "while %s do %s" (string_of_expr e) (string_of_cmd c)
+  | Seq (c1, c2) -> Printf.sprintf "%s;\n%s" (string_of_cmd c1) (string_of_cmd c2)
+  | If (e, c1, c2) -> Printf.sprintf "(if %s then\n %s\nelse\n %s)" (string_of_expr e) (string_of_cmd c1) (string_of_cmd c2)
+  | While (e, c) -> Printf.sprintf "(while %s do\n %s)" (string_of_expr e) (string_of_cmd c)
   | Protect (x, p, r) -> Printf.sprintf "%s := protect_%s(%s)" x (string_of_protect p) (string_of_rhs r);;
 
 (** 		DIRECTIVES 		**)

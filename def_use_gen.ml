@@ -28,7 +28,7 @@ module type DefUseGen = sig
   (* creates, if not not already present, and returns a node*)
   val new_node: generated -> node_type -> node
 
-  val populate_graph: generated -> cmd -> int -> generated
+  val populate_graph: cmd -> generated
 
   val populate_graph_exp: generated -> expr -> int -> node
 
@@ -127,9 +127,9 @@ module HashTableGen : DefUseGen = struct
           gen.g <- G.set_edge gen.g (n, sink) (-1);
           r_node
 
-  let rec populate_graph (c: cmd) : generated = 
-    let sink = G.sink gen.g in
-    let helper (gen: generated) (c: cmd) (cost: int) : generated =
+  let populate_graph (c: cmd) : generated = 
+    let rec helper (gen: generated) (c: cmd) (cost: int) : generated =
+      let sink = G.sink gen.g in
       match c with 
         | Fail -> gen
         | Skip -> gen
@@ -168,7 +168,7 @@ module HashTableGen : DefUseGen = struct
             let _ = populate_graph_rhs gen rhs cost in
             gen in
     let gen = new_gen () in
-    helper gen cmd 1
+    helper gen c 1
 
   let print_generated (gen : generated) : unit =
     let strNt (nt : node_type) : string =

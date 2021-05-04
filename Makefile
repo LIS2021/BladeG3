@@ -8,4 +8,4 @@ pipe: $(SRC)
 	ocamlopt -o $@ $(SRC)
 
 clean:
-	rm -f test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test
+	rm -f test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test pipe

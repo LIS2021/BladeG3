@@ -87,4 +87,4 @@ and cmd1 input =
        let* r = between (token "(") (token ")") rhs in
        return (Protect(x, Auto, r)))) input;;
 
-let parse_channel channel = parse (command >>= fun x -> eof x) (LazyStream.of_channel channel)
+let parse_channel channel = parse (command << spaces << eof ()) (LazyStream.of_channel channel)
