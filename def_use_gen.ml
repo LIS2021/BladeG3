@@ -27,7 +27,7 @@ module type DefUseGen = sig
   (* creates, if not not already present, and returns a node*)
   val new_node: generated -> node_type -> node
 
-  val populate_graph: cmd -> generated
+  val populate_graph: cmd -> (cmd -> int -> int) -> (cmd -> int -> int) -> generated
 
   val populate_graph_exp: generated -> expr -> int -> node
 

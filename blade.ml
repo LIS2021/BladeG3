@@ -29,13 +29,13 @@ module SimpleWeight : WeightModel = struct
     let cost_f (c : cmd) (oc : int) : int =
       match c with
         | VarAssign (_, rhs) -> 
-          match rhs with
+          (match rhs with
             | ArrayRead _ -> 1
-            | _ -> 5
+            | _ -> 5)
         | _ -> -1
 
     let cost_r (c : cmd) (oc : int) : int =
-      match dir, conf with
+      match c with
         | While(_, _) -> oc + 10
         | _ -> oc 
 
@@ -44,7 +44,7 @@ end
 
 module type IBlade = sig
 
-    val blade : cmd -> cmd
+    val blade : (module WeightModel) -> cmd -> cmd
 
     val protect_cmd : cmd -> identifier list -> cmd
 
@@ -71,8 +71,8 @@ module Blade : IBlade = struct
             | Protect(id, p, r) -> c
 
     let blade (model : (module WeightModel)) (c : cmd) : cmd = 
-        let C = (val model : WeightModel) in
-        let gen = H.populate_graph c C.cost in
+        let module C = (val model : WeightModel) in
+        let gen = H.populate_graph c C.cost_f C.cost_r in
         let g = H.get_graph gen in
         let pairs = H.get_pairs gen in
         let (_, cut) = G.edmonds_karp g in
