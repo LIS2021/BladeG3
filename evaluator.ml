@@ -312,4 +312,4 @@ module UniformCost : CostModel = struct
 end;;
 
 let defaultConfiguration (c : cmd) (size : int) : configuration =
-    {is = []; cs = [c]; mu = Array.make size 0; rho = StringMap.empty};; 
+    {is = []; cs = [c]; mu = Array.make size 0; rho = StringMap.empty};;
