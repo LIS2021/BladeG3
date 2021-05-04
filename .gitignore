@@ -1,1 +1,5 @@
 old
+*.cmi
+*.cmx
+*.o
+*.mli
