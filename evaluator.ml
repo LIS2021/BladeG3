@@ -23,7 +23,7 @@ type vmerror =
   | InvalidGuardType
   | InstructionOutOfRange
   | UnassignedReference of string
-  | InvalidOperandType of string;;
+  | InvalidOperandType of string * string;;
 
 let string_of_vmerror = function
   | EndOfStream -> "no more instructions or command available"
@@ -32,7 +32,7 @@ let string_of_vmerror = function
   | InvalidGuardType -> "invalid type for guard"
   | InstructionOutOfRange -> "instruction out of range"
   | UnassignedReference s -> Printf.sprintf "identifier %s has not been initialized yet" s
-  | InvalidOperandType s -> Printf.sprintf "invalid operand type %s" s;;
+  | InvalidOperandType (s1, s2) -> Printf.sprintf "invalid operand type: expected %s, got %s" s1 s2;;
 
 type 'a vmresult = ('a, vmerror) result;;
 
@@ -91,17 +91,20 @@ let freshName (name : string) (rho : value StringMap.t) : string =
 let checkInteger (v : value) : int vmresult =
   match v with
     | CstI(n) -> pure n
-    | _ -> err (InvalidOperandType "integer");;
+    | CstB(b) -> pure(Bool.to_int b)
+    | _ -> err (InvalidOperandType ("integer", "array"));;
 
 let checkBoolean (v : value) : bool vmresult =
   match v with
     | CstB(b) -> pure b
-    | _ -> err (InvalidOperandType "boolean");;
+    | CstI(i) -> pure(i != 0)
+    | _ -> err (InvalidOperandType ("boolean", "array"));;
 
 let checkArray (v : value) : arr vmresult =
   match v with
     | CstA(a) -> pure a
-    | _ -> err (InvalidOperandType "array");;
+    | CstI(_) -> err (InvalidOperandType ("array", "integer"))
+    | CstB(_) -> err (InvalidOperandType ("array", "boolean"));;
 
 
 let rec phi (rho : value StringMap.t) (is : instruction list) : value StringMap.t =
@@ -308,6 +311,36 @@ module UniformCost : CostModel = struct
   let cost dir conf =
     match dir, conf with
       | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
+      | _, _ -> 1
+end;;
+
+module FenceSensitiveCost : CostModel = struct
+  let cost dir conf =
+    match dir, conf with
+      | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
+      | Exec(n), {is; cs; mu; rho} ->
+              (match splitIs is n with
+                | Ok (_, IProtectE(_, Fence, _), _) -> 5
+                | _ -> 1)
+      | _, _ -> 1
+end;;
+
+module SimpleCost : CostModel = struct
+  let cost dir conf =
+    match dir, conf with
+      | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
+      | Fetch, _ -> 2
+      | PFetch(_), _ -> 1
+      | Exec(n), {is; cs; mu; rho}  ->
+          (match splitIs is n with
+            | Ok (_, IProtectE(_, Fence, _), _) -> 5
+            | Ok (_, Load _, _) -> 10
+            | _ -> 1)
+      | Retire, {is = i :: _; cs; mu; rho} -> 
+          (match i with 
+            | Nop -> 0
+            | StoreV _ -> 10
+            | _ -> 1)
       | _, _ -> 1
 end;;
 
