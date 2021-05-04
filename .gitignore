@@ -3,3 +3,4 @@ old
 *.cmx
 *.o
 *.mli
+pipe
