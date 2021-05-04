@@ -1,5 +1,5 @@
-open Ast;;
-open Opal;;
+open Ast
+open Opal
 
 let keywords =
   [ "skip"

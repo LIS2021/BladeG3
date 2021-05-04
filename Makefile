@@ -4,5 +4,8 @@ TEST_SRC=test/test_gen.ml test/test_graph.ml test/test0.ml test/test1.ml
 %.test: $(SRC) $(TEST_SRC)
 	ocamlopt -o $@ $(SRC) test/$*.ml
 
+pipe: $(SRC)
+	ocamlopt -o $@ $(SRC) 
+
 clean:
 	rm test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test 
