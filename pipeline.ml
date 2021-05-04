@@ -23,28 +23,29 @@ let () =
           let weights = (match !weight_model with
             | "simple" -> (module Blade.SimpleWeight : Blade.WeightModel)
             | "constant"
-            | _ -> (module Blade.ConstantWeight : Blade.WeightModel)) in
+            | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights ast else ast in
           if !output_file <> "" then 
-              let out_file = open_out !output_file in
+              (let out_file = open_out !output_file in
               (try
                 output_string (open_out !output_file) (Ast.string_of_cmd final_ast);
               with e ->
-                close_out_noerr out_file);
+                close_out_noerr out_file));
           let conf = Evaluator.defaultConfiguration final_ast 100 in
           let spec = Evaluator.defaultSpeculator Random.bool in
           let cost = (match !cost_model with
-            | "fence" ->  (module Evaluator.FenceSensitiveCost : Evaluator.CostModel)
+            | "fence"  -> (module Evaluator.FenceSensitiveCost : Evaluator.CostModel)
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
             | "uniform"
-            | _       ->  (module Evaluator.UniformCost : Evaluator.CostModel)) in
-          Printf.printf "%s\n" !output_file;
+            | _        -> (module Evaluator.UniformCost : Evaluator.CostModel)) in
           let eval = if !trace_file <> "" then Evaluator.evalWithTrace (open_out !trace_file) else Evaluator.eval in
-          Printf.printf "ast:\n%s\n" (Ast.string_of_cmd final_ast);
+          Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
           (match eval conf spec cost with
-             | Ok (conf', obs, count) -> Printf.printf "count: %d\n" count
-             | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
+            | Ok (conf', obs, count) -> 
+                Printf.printf "\nobs:\n[%s]\n" (Utils.strObs obs);
+                Printf.printf "\ncount: %d\n" count
+            | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
       | None -> failwith "cannot parse input file"
   with e ->
     close_in_noerr in_file;
-    failwith "fine"
+    raise e
