@@ -151,7 +151,7 @@ module HashTableGen : DefUseGen = struct
             gen
         | Seq (c1, c2) -> 
             let gen = helper gen c1 (cost_f c cost) in
-            let gen = helper gen c2 cost in 
+            let gen = helper gen c2 (cost_f c cost) in 
             gen
         | If (e, c1, c2) ->
             let gen = helper gen c1 (cost_f c cost) in
