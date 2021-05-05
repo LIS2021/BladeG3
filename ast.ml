@@ -1,27 +1,39 @@
+(** This file contains the type definitions for the AST 
+    along with utilities function to format and print 
+    the various computation steps
+**)
 module StringMap = Map.Make(String)
 
 type identifier = string;;
 
+(** The types of binary operators we can employ **)
 type op =
   | Add
   | Lte
   | Lt
   | BitAnd;;
 
+(** Given a representation binary operation 
+  returns the corresponding symbols to be printed **)
 let string_of_op = function
   | Add -> "+"
   | Lte -> "<="
   | Lt -> "<"
   | BitAnd -> "&";;
 
+(** The security label type**)  
 type label = unit;;
 
+(** A representation of arrays as a structure
+with a base index, a length and a security label **)
 type arr = {
   base : int;
   length : int;
   label : label;
 };;
 
+(** Given a representation of an array
+  returns the corresponding string to be printed **)
 let string_of_arr a = Printf.sprintf "{%d,%d}" a.base a.length
 
 let makeArr (b : int) (l : int) : arr =
@@ -32,6 +44,8 @@ type value =
   | CstB of bool
   | CstA of arr;;
 
+(** Given a representation of a value
+  returns the corresponding string to be printed **)
 let string_of_value = function
   | CstI n -> string_of_int n
   | CstB b -> string_of_bool b
@@ -49,6 +63,8 @@ type expr =
   | Length of expr
   | Base of expr;;
 
+(** Given a representation of an expression
+  recursively returns the corresponding string to be printed **)
 let rec string_of_expr = function
   | Cst v -> string_of_value v
   | Var x -> x
@@ -65,6 +81,8 @@ type rhs =
   | PtrRead of expr * label
   | ArrayRead of arr * expr;;
 
+(** Given a representation of a right hand-side
+  returns the corresponding string to be printed **)
 let string_of_rhs = function
   | Expr e -> string_of_expr e
   | PtrRead (e, _) -> Printf.sprintf "*%s" (string_of_expr e)
@@ -75,10 +93,14 @@ let makePtrRead e = PtrRead(e, ());;
 
 type protect = Slh | Fence | Auto;;
 
+(** Given a representation of a protect
+  returns the corresponding string to be printed **)
 let string_of_protect = function
   | Slh -> "slh"
   | Fence -> "fence"
   | Auto -> "auto";;
+
+(** 		COMMANDS 		**)
 
 type cmd =
   | Skip
@@ -91,6 +113,9 @@ type cmd =
   | While of expr * cmd
   | Protect of identifier * protect * rhs;;
 
+(** Given a representation of a command
+  returns the corresponding string to be printed 
+  with the correct indentation **)
 let string_of_cmd =
   let rec helper (indent : int) (c : cmd) =
     let spaces = String.make indent ' ' in
@@ -115,6 +140,8 @@ type directive =
   | Exec of int
   | Retire
 
+(** Given a representation of a directive
+  returns the corresponding string to be printed **)
 let string_of_directive = function
   | Fetch -> "fetch"
   | PFetch b -> Printf.sprintf "speculative fetch with %b" b
@@ -131,6 +158,8 @@ type observation =
   | OFail of guard_fail_id
   | Rollback of int
 
+(** Given a representation of a observation
+  returns the corresponding string to be printed **)
 let string_of_observation = function
   | None -> "none"
   | Read (n, s) -> Printf.sprintf "read %d pending [%s]" n (String.concat ", " (List.map string_of_int s))
@@ -151,6 +180,8 @@ type instruction =
   | Guard of expr * prediction * cmd list * guard_fail_id
   | IFail of guard_fail_id ;;
 
+(** Given a representation of a instruction
+  returns the corresponding string to be printed **)
 let string_of_instruction = function
   | Nop -> "nop"
   | AssignE (x, e) -> Printf.sprintf "%s := %s" x (string_of_expr e)
