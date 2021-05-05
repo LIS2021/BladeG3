@@ -38,14 +38,14 @@ The available options for the `pipe` executable are the following:
             --blade:                     Enable blade optimization
             --model [unifrom|simple]:    Select cost model for evaluation
             --weights [constant|simple]: Select weights model for blade
-            -t <file>:                     Dumps the trace execution in <file>.trace
-            -o <file>:                     Save the processed source code in <file>.out
+            -t <file>:                   Dumps the trace execution in <file>.trace
+            -o <file>:                   Save the processed source code in <file>.out
 
 The available options for the `run_blade` executable are the following:
 
         OPTIONS:
             
             --weights [constant|simple]: Select weights model for blade
-            -o <file>:                     Save the processed source code in <file>.out
+            -o <file>:                   Save the processed source code in <file>.out
 
 
