@@ -34,11 +34,9 @@ let () =
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights ast else ast in
           if !output_file <> "" then 
-              (let out_file = open_out !output_file in
-              (try
-                output_string (open_out !output_file) (Ast.string_of_cmd final_ast);
-              with e ->
-                close_out_noerr out_file));
+              (let out_file = open_out (!output_file ^ ".out") in
+              (try output_string out_file (Ast.string_of_cmd final_ast);
+              with e -> close_out_noerr out_file));
           let conf = Evaluator.defaultConfiguration final_ast 100 in
           let spec = Evaluator.defaultSpeculator Random.bool in
           let cost = (match !cost_model with
@@ -46,11 +44,17 @@ let () =
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
             | "uniform"
             | _        -> (module Evaluator.UniformCost : Evaluator.CostModel)) in
-          let eval = if !trace_file <> "" then Evaluator.evalWithTrace (open_out !trace_file) else Evaluator.eval in
+          let eval = (if !trace_file <> "" then 
+            (fun conf spec cost ->
+              let out_tr = (open_out (!trace_file ^ ".trace")) in
+              (try Evaluator.evalWithTrace out_tr conf spec cost
+              with e -> close_out_noerr out_tr; Evaluator.err Evaluator.EndOfStream))
+            else Evaluator.eval) in
           Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
           (match eval conf spec cost with
             | Ok (conf', obs, count) -> 
-                Printf.printf "\nobs:\n[%s]\n" (Utils.strObs obs);
+                Printf.printf "\nobs:\n[%s]\n\n"
+                  (List.fold_left (fun it o -> Printf.sprintf "%s%s; " it (Ast.string_of_observation o)) "" obs);
                 Printf.printf "\ncount: %d\n" count
             | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
       | None -> failwith "cannot parse input file"

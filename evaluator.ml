@@ -8,6 +8,19 @@ type configuration = {
 	rho : value StringMap.t ;
 };;
 
+let string_of_configuration (conf : configuration) : string =
+  "is:\n" ^ (List.fold_left (fun it i -> Printf.sprintf "%s%s;\n" it (string_of_instruction i)) "" conf.is) ^ "\n\n" ^
+  "cs:\n" ^ (List.fold_left (fun it c -> Printf.sprintf "%s%s;\n" it (string_of_cmd c)) "" conf.cs) ^ "\n\n" ^
+  "mu: [ " ^ (Array.fold_left (fun it v -> Printf.sprintf "%s%d; " it v) "" conf.mu) ^ "]\n\n" ^
+  "rho: { " ^ (StringMap.fold (fun k v it -> Printf.sprintf "%s%s: %s; " it k (string_of_value v)) conf.rho "") ^ "}\n\n"
+
+let string_of_output ((conf : configuration), (obs : observation list), (count : int)) : string =
+  String.make 20 '-' ^ "\n\n" ^
+  string_of_configuration conf ^
+  "obs:\n[ " ^ (List.fold_left (fun it o -> Printf.sprintf "%s%s; " it (string_of_observation o)) "" obs) ^ "]\n\n" ^
+  "count: " ^ (string_of_int count) ^ "\n\n"
+
+
 (** Module modeling the template of a cost model **)
 module type CostModel = sig
   (** Given a directive and a configuration
@@ -294,8 +307,7 @@ let eval (conf : configuration) (speculator : (module Speculator)) (model : (mod
   eval' conf speculator model (fun _ -> ())
 
 let evalWithTrace (out : out_channel) (conf : configuration) (speculator : (module Speculator)) (model : (module CostModel)) : (configuration * observation list * int) vmresult =
-  eval' conf speculator model (fun _ -> ())
-  (* output_string out ... *)
+  eval' conf speculator model (fun r -> output_string out (string_of_output r))
 
 let evalList' (conf : configuration) (speculator : directive list) (injector : (configuration * observation list * int) -> unit) (cost : directive -> configuration -> int) : (configuration * observation list * int) vmresult=
   let rec helper conf speculator obs count =

@@ -4,3 +4,5 @@ old
 *.o
 *.mli
 pipe
+*.out
+*.trace

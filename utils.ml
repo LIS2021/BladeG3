@@ -75,29 +75,29 @@ let strObserv (o : observation) =
         | OFail(id)    -> sprintf "OFail(%d)" id
         | Rollback(p) -> sprintf "Rollback(%d)" p;;
 
-let strRho (m : value StringMap.t) =
+let string_of_rho (m : value StringMap.t) =
     let helper k v it =
-        sprintf "%s%s: %s; " it k (strValue v)
+        sprintf "%s%s: %s; " it k (string_of_value v)
     in StringMap.fold helper m "";;
 
-let strMu (a : int array) =
+let string_of_mu (a : int array) =
     let helper it v =
         sprintf "%s%d; " it v
     in Array.fold_left helper "" a;;
 
-let strObs (obs : observation list) =
+let string_of_obs_list (obs : observation list) =
     let helper it o =
         sprintf "%s%s; " it (strObserv o)
     in List.fold_left helper "" obs;;
 
-let strIs (is : instruction list) =
+let string_of_is (is : instruction list) =
     let helper it i =
         sprintf "%s%s;\n\t" it (strInstr i)
     in match is with
         | [] -> ""
         | _  -> "\n\n\t" ^ (List.fold_left helper "" is) ^ "\n  ";;
 
-let strCs (cs : cmd list) =
+let string_of_cs (cs : cmd list) =
     let helper it c =
         sprintf "%s%s;\n\t" it (strCmd c)
     in match cs with
@@ -106,14 +106,13 @@ let strCs (cs : cmd list) =
 
 let printOutput (out : out_channel) ((conf : configuration), (obs : observation list), (count : int)): unit =
     let res =
-        sprintf "conf : {\n"^
-        sprintf "  is:  [%s]\n" (strIs conf.is)^
-        sprintf "  cs:  [%s]\n" (strCs conf.cs)^
-        sprintf "  mu:  [%s]\n" (strMu conf.mu)^
-        sprintf "  rho: {%s}\n" (strRho conf.rho)^
-        sprintf "}\n"^
-        sprintf "obs : [%s]\n" (strObs obs)^
-        sprintf "count : %d\n\n" count
+        String.make 20 '-'^
+        sprintf "is:\n%s\n\n" (string_of_is conf.is)^
+        sprintf "cs:\n%s\n\n"  (string_of_cs conf.cs)^
+        sprintf "mu: [%s]\n\n" (string_of_mu conf.mu)^
+        sprintf "rho: {%s}\n\n" (string_of_rho conf.rho)^
+        sprintf "obs:\n[%s]\n\n" (string_of_obs_list obs)^
+        sprintf "count: %d\n\n" count
     in Printf.fprintf out "%s"res
 
 
