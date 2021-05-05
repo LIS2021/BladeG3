@@ -8,11 +8,17 @@ type configuration = {
 	rho : value StringMap.t ;
 };;
 
+(** Module modeling the template of a cost model **)
 module type CostModel = sig
+  (** Given a directive and a configuration
+      returns the cost the instruction ran **)
   val cost : directive -> configuration -> int
 end
 
+(** Module modeling the template of a speculator **)
 module type Speculator = sig
+  (** Given a configuration and a list of observations
+      returns a possible next directive **)
   val speculate : configuration -> observation list -> directive
 end
 
@@ -51,6 +57,10 @@ let (>>=) = Result.bind;;
 let rollbackCount = ref 0;;
 let freshRollbackId () = incr rollbackCount; !rollbackCount;;
 
+(** Given a list and an integer
+    returns the list of items before the item with the given index
+    the item with the given index
+    and the list of items following that item **)
 let splitIs (ls : 'a list) (n : int) : ('a list * 'a * 'a list) vmresult =
   let rec split_is_rec fls n = function
     | [] -> err InstructionOutOfRange
@@ -302,6 +312,12 @@ let evalList' (conf : configuration) (speculator : directive list) (injector : (
 let evalList (conf : configuration) (speculator : directive list) (cost : directive -> configuration -> int) : (configuration * observation list * int) vmresult =
   evalList' conf speculator (fun _ -> ()) cost;;
 
+(** Simple implementation of the speculator
+    where the PFetch directive is returned with a value obtained from
+    a pseudorandom distribution when possible,
+    otherwise the Retire directive is returned when possible,
+    otherwise the Exec(0) directive is returned when possible,
+    otherwise the Fetch directive is returned **)
 let defaultSpeculator (dist : unit -> bool) : (module Speculator) =
   (module struct
      let speculate conf obs =
@@ -315,6 +331,9 @@ let defaultSpeculator (dist : unit -> bool) : (module Speculator) =
          | _, _                  -> Fetch;;
   end)
 
+(** Simple implementation of the cost model
+    where every instruction has the same cost
+    except for the fetching of Seq **)
 module UniformCost : CostModel = struct
   let cost dir conf =
     match dir, conf with
@@ -322,6 +341,9 @@ module UniformCost : CostModel = struct
       | _, _ -> 1
 end;;
 
+(** Simple implementation of the cost model
+    where the protect instruction has a higher cost
+    when implemented with a fence **)
 module FenceSensitiveCost : CostModel = struct
   let cost dir conf =
     match dir, conf with
@@ -333,6 +355,11 @@ module FenceSensitiveCost : CostModel = struct
       | _, _ -> 1
 end;;
 
+(** Simple implementation of the cost model
+    where the protect instruction has a higher cost
+    when implemented with a fence
+    and the instructions operating on the memory(Load/Store)
+    have an higher cost than the others **)
 module SimpleCost : CostModel = struct
   let cost dir conf =
     match dir, conf with

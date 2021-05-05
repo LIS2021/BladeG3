@@ -1,16 +1,27 @@
-
+(** Module modeling the template of a graph structure
+    along with various utilities functions
+    and the edmond karp algorithm **)
 module type Graph = sig
 
     type node
     type graph
     type edge = node * node
 
+    (* Returns a new empty graph *)
     val empty : unit -> graph
 
+    (** Given a graph 
+        returns a pair composed of the new graph
+        and the identifier of the node added**)
     val add : graph -> (graph * node)
 
+    (** Given a graph, an edge and an integer,
+        returns the graph updated with the edge capacity
+        set to the given integer **)
     val set_edge : graph -> edge -> int -> graph
 
+    (** Given a graph and an edge
+        returns the capacity of the given edge **)
     val capacity : graph -> edge -> int
 
     val print_graph : graph -> unit
@@ -23,11 +34,15 @@ module type Graph = sig
 
     val sink : graph -> node
 
+    (** Given a graph and a node identifier 
+        returns a list of node identifiers, 
+        being neighbours of the given node**)
     val neighbours : graph -> node -> node list
 
     val copy : graph -> graph
 
-    (*
+    (** Utilities function used internally in the edmonds_karp function **)
+    (**
     val bfs : graph -> (node -> unit) -> unit
 
     val bfs_fp : graph -> (graph * int array)
@@ -35,8 +50,12 @@ module type Graph = sig
     val max_flow : graph -> int array -> int
 
     val update_graph : graph -> int array -> int -> graph * int
-    *)
+    **)
 
+    (** Given a graph
+        returns a pair composed of a graph 
+        and a list of node representing the cut list
+        identified by the edmond karp algorithm **)
     val edmonds_karp : graph -> (graph * node list)
 
     val filter_assoc : (node * 'b) list -> node list -> 'b list

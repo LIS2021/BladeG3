@@ -4,15 +4,26 @@ open Def_use_gen
 
 module H = HashTableGen
 module G = UseGraph
- 
-module type WeightModel = sig
 
+(** Module modeling the template 
+    for the weight model to utilize
+    during the construction of the graph
+    to correctly assign a cost to each arc **)
+
+module type WeightModel = sig
+    (** Given a command and the current cost
+        returns the cost to be assigned to the arc **)
     val cost_f : cmd -> int -> int
 
+    (** Given a command and the current cost
+        returns the new cost to be given to all 
+        the commands in the same block **)
     val cost_r : cmd -> int -> int
 
 end
 
+(** Simple implementation where each arc 
+    has the same constant cost **)
 module ConstantWeight : WeightModel = struct
     
     let cost_f (c : cmd) (oc : int) : int =
@@ -24,6 +35,11 @@ module ConstantWeight : WeightModel = struct
 
 end
 
+(** Simple implementation where commands
+    inside a while loop are penalized,
+    as well as assignments to a variable
+    where the rhs in not a value read from 
+    an array(hence not SLH-protectable) **)
 module SimpleWeight : WeightModel = struct
 
     let cost_f (c : cmd) (oc : int) : int =
@@ -41,11 +57,18 @@ module SimpleWeight : WeightModel = struct
 
 end
 
-
+(** Module modeling the template 
+    of the blade program **)
 module type IBlade = sig
 
+    (** Given a weight model and a command(a program)
+        returns the program correctly protected **)
     val blade : (module WeightModel) -> cmd -> cmd
 
+    (** Given a command and a list of identifiers to protect
+        returns the command updated with the correct type of protect
+        if the command was an assignment to an identifier present in the list,
+        the command unaltered otherwise **)
     val protect_cmd : cmd -> identifier list -> cmd
 
 end

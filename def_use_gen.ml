@@ -1,8 +1,6 @@
 open Ast
 open Graph
 
-(* TODO add function for different costs for branches *)
-
 module G = UseGraph
 (* Possible types of the nodes of the def-use graph *)
 type node_type =
@@ -10,27 +8,39 @@ type node_type =
   | NExpr of expr
   | NRhs of rhs
 
-(* Abstract module for the def-use graph *)
+(** Module modeling the template 
+    of the def-use graph generator **)
 module type DefUseGen = sig
+  (* The type of the nodes of the def-use graph *)
   type node = G.node
+  (* The type of the def-use graph *)
   type graph = G.graph
+  (** The type of the structure generated **)
   type generated
 
-  (* create a new generator *)
+  (* Create a new structure *)
   val new_gen : unit -> generated
 
-  (* returns the graph generated *)
+  (* Returns the graph present in the generated structure *)
   val get_graph: generated -> graph
 
+  (* Returns the list of pairs present in the generated structure *)
   val get_pairs : generated -> (node * identifier) list
 
-  (* creates, if not not already present, and returns a node*)
+  (* Creates, if not not already present, and returns a node *)
   val new_node: generated -> node_type -> node
 
+  (** Given a command, a function to compute the cost of the arc generated,
+      and a function to compute the cost of the following commands in the block,
+      returns the structure generated **)
   val populate_graph: cmd -> (cmd -> int -> int) -> (cmd -> int -> int) -> generated
 
+  (** Given the structure generated so far, an expression and a cost,
+      returns the new node generated **)
   val populate_graph_exp: generated -> expr -> int -> node
 
+  (** Given the structure generated so far, a right hand-side and a cost,
+      returns the new node generated **)
   val populate_graph_rhs: generated -> rhs -> int -> node
 
   val print_generated : generated -> unit
@@ -40,7 +50,11 @@ end
 module HashTableGen : DefUseGen = struct
 
   type node = G.node
-  type graph = G.graph 
+  type graph = G.graph
+  (** The generated structure modeled as:
+      an hashtable containing the nodes generated so far and their number identifier
+      a list of node identifiers and variable identifiers (to be protected)
+      a graph **)
   type generated = {
     hasht: (node_type, node) Hashtbl.t;
     mutable pairs: (node * identifier) list;
@@ -180,7 +194,5 @@ module HashTableGen : DefUseGen = struct
     print_hashtbl gen.hasht;
     print_pairs gen.pairs;
     G.print_graph gen.g
-
-    
 
 end
