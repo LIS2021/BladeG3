@@ -166,8 +166,8 @@ module HashTableGen : DefUseGen = struct
             let cond_node = populate_graph_exp gen e cost in
             gen.g <- G.set_edge gen.g (cond_node, sink) (cost_f c cost);
             gen
-        | While (e, c) ->
-            let gen = helper gen c (cost_r c cost) in
+        | While (e, c1) ->
+            let gen = helper gen c1 (cost_r c cost) in
             let cond_node = populate_graph_exp gen e cost in 
             gen.g <- G.set_edge gen.g (cond_node, sink) (cost_f c cost);
             gen

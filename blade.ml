@@ -46,8 +46,8 @@ module SimpleWeight : WeightModel = struct
       match c with
         | VarAssign (_, rhs) -> 
           (match rhs with
-            | ArrayRead _ -> 1
-            | _ -> 5)
+            | ArrayRead _ -> oc
+            | _ -> oc + 4)
         | _ -> -1
 
     let cost_r (c : cmd) (oc : int) : int =
