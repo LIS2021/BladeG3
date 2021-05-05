@@ -4,5 +4,6 @@ old
 *.o
 *.mli
 pipe
+run_blade
 *.out
 *.trace

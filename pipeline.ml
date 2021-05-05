@@ -7,7 +7,7 @@
     [-t] [out.txt]  : using this flag dumps the trace execution in the given file
     [-o] [out.txt]  : using this flag dumps the result in the given file 
 **)
-let usage_msg = "pipeline [--blade] <file>"
+let usage_msg = "pipe [OPTIONS] <file>"
 let input_file = ref ""
 let output_file = ref ""
 let trace_file = ref ""
