@@ -1,10 +1,6 @@
-(** Program modeling the pipeline performed by the execution of Blade, usage:
-    pipeline [--blade] [--model] [--weights] [-v] [-t] [-o] [out.txt] <input.txt>
-    [--blade]       : using this flag enforce the use of blade
-    [--model]       : choose the model of cost for the instructions between "simple", "fence" or "uniform"
+(** Program modeling the execution of Blade, usage:
+    ./run_blade [--weights] [-o] [out.txt] <input.txt>
     [--weights]     : choose the model of weights between "simple" or "constant"
-    [-v]            : using this flag enables verbose output
-    [-t] [out.txt]  : using this flag dumps the trace execution in the given file
     [-o] [out.txt]  : using this flag dumps the result in the given file 
 **)
 let usage_msg = "pipe [--blade] <file>"

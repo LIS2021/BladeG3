@@ -95,7 +95,7 @@ module Blade : IBlade = struct
 
     let blade (model : (module WeightModel)) (c : cmd) : cmd = 
         let module C = (val model : WeightModel) in
-        let gen = H.populate_graph c C.cost_f C.cost_r in
+        let gen = H.populate_graph c C.cost_f C.cost_r false in
         let g = H.get_graph gen in
         let pairs = H.get_pairs gen in
         let (_, cut) = G.edmonds_karp g in

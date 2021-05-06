@@ -1,4 +1,4 @@
-(** Program modeling the pipeline performed by the execution of Blade, usage:
+(** Program modeling the pipeline performed by the execution of virtual evaluator, usage:
     pipeline [--blade] [--model] [--weights] [-v] [-t] [-o] [out.txt] <input.txt>
     [--blade]       : using this flag enforce the use of blade
     [--model]       : choose the model of cost for the instructions between "simple", "fence" or "uniform"

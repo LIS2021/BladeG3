@@ -16,14 +16,14 @@ Compilation of the Blade executable can be done by running:
 
 ## Execution
 
-The virtual machine can be run thorugh the `pipe` executable, so by calling
+The virtual machine can be run through the `pipe` executable, by calling
 
         ./pipe [OPTIONS] <file>
 
 Blade is included in the executable and can be activated in the options.  
 `<file>` must contain the input code to be executed (and possibly protected with blade).
 
-The execution of just Blade can be done through the `run_blade` executable:
+The execution of only Blade can be done through the `run_blade` executable:
         
         ./run_blade [OPTIONS] <file>
 
@@ -36,7 +36,7 @@ The available options for the `pipe` executable are the following:
         OPTIONS:
             
             --blade:                     Enable blade optimization
-            --model [unifrom|simple]:    Select cost model for evaluation
+            --model [uniform|simple]:    Select cost model for evaluation
             --weights [constant|simple]: Select weights model for blade
             -v:                          Enable verbose output
             -t <file>:                   Dumps the trace execution in <file>.trace
