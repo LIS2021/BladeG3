@@ -61,9 +61,10 @@ end
     of the blade program **)
 module type IBlade = sig
 
-    (** Given a weight model and a command(a program)
+    (** Given a weight model, a command(a program)
+        and a boolean flag for spectre1.1,
         returns the program correctly protected **)
-    val blade : (module WeightModel) -> cmd -> cmd
+    val blade : (module WeightModel) -> cmd -> bool -> cmd
 
     (** Given a command and a list of identifiers to protect
         returns the command updated with the correct type of protect
