@@ -61,9 +61,10 @@ end
     of the blade program **)
 module type IBlade = sig
 
-    (** Given a weight model and a command(a program)
+    (** Given a weight model, a command(a program)
+        and a boolean flag for spectre1.1,
         returns the program correctly protected **)
-    val blade : (module WeightModel) -> cmd -> cmd
+    val blade : (module WeightModel) -> bool -> cmd -> cmd
 
     (** Given a command and a list of identifiers to protect
         returns the command updated with the correct type of protect
@@ -93,9 +94,9 @@ module Blade : IBlade = struct
             | While(e, c) -> While(e, protect_cmd c lprot)
             | Protect(id, p, r) -> c
 
-    let blade (model : (module WeightModel)) (c : cmd) : cmd = 
+    let blade (model : (module WeightModel)) (spectre: bool) (c : cmd) : cmd = 
         let module C = (val model : WeightModel) in
-        let gen = H.populate_graph c C.cost_f C.cost_r in
+        let gen = H.populate_graph c C.cost_f C.cost_r spectre in
         let g = H.get_graph gen in
         let pairs = H.get_pairs gen in
         let (_, cut) = G.edmonds_karp g in

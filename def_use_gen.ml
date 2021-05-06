@@ -31,9 +31,10 @@ module type DefUseGen = sig
   val new_node: generated -> node_type -> node
 
   (** Given a command, a function to compute the cost of the arc generated,
-      and a function to compute the cost of the following commands in the block,
+      a function to compute the cost of the following commands in the block,
+      and a flag signaling the protection vs Spectre1.1,
       returns the structure generated **)
-  val populate_graph: cmd -> (cmd -> int -> int) -> (cmd -> int -> int) -> generated
+  val populate_graph: cmd -> (cmd -> int -> int) -> (cmd -> int -> int) -> (bool) -> generated
 
   (** Given the structure generated so far, an expression and a cost,
       returns the new node generated **)
@@ -134,7 +135,7 @@ module HashTableGen : DefUseGen = struct
           gen.g <- G.set_edge gen.g (n, sink) (-1);
           r_node
 
-  let populate_graph (c: cmd) (cost_f : cmd -> int -> int) (cost_r : cmd -> int -> int) : generated = 
+  let populate_graph (c: cmd) (cost_f : cmd -> int -> int) (cost_r : cmd -> int -> int) (spectre: bool): generated = 
     let rec helper (gen: generated) (c: cmd) (cost: int) : generated =
       let sink = G.sink gen.g in
       match c with 
@@ -148,12 +149,16 @@ module HashTableGen : DefUseGen = struct
             gen
         | PtrAssign (e1, e2, l) ->
             let ptr = populate_graph_exp gen e1 cost in
-            let _ = populate_graph_exp gen e2 cost in
+            let e = populate_graph_exp gen e2 cost in
+            if spectre then 
+              gen.g <- G.set_edge gen.g (e, sink) (cost_f c cost) 
+            else ();
             gen.g <- G.set_edge gen.g (ptr, sink) (cost_f c cost);
             gen
         | ArrAssign (a, e1, e2) ->
             let index = populate_graph_exp gen e1 cost in
-            let _ = populate_graph_exp gen e2 cost in
+            let e = populate_graph_exp gen e2 cost in
+            if spectre then (gen.g <- G.set_edge gen.g (e, sink) (cost_f c cost));
             gen.g <- G.set_edge gen.g (index, sink) (cost_f c cost);
             gen
         | Seq (c1, c2) -> 

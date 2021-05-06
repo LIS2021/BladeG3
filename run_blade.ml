@@ -1,17 +1,15 @@
-(** Program modeling the pipeline performed by the execution of Blade, usage:
-    pipeline [--blade] [--model] [--weights] [-v] [-t] [-o] [out.txt] <input.txt>
-    [--blade]       : using this flag enforce the use of blade
-    [--model]       : choose the model of cost for the instructions between "simple", "fence" or "uniform"
+(** Program modeling the execution of Blade, usage:
+    ./run_blade [--weights] [-o] [out.txt] <input.txt>
     [--weights]     : choose the model of weights between "simple" or "constant"
-    [-v]            : using this flag enables verbose output
-    [-t] [out.txt]  : using this flag dumps the trace execution in the given file
     [-o] [out.txt]  : using this flag dumps the result in the given file 
 **)
 let usage_msg = "pipe [--blade] <file>"
 let input_file = ref ""
 let output_file = ref ""
 let weight_model = ref ""
+let spectre = ref false
 let spec_list = [("--weights", Arg.Set_string weight_model, "Select weights model for blade");
+                 ("-s1.1", Arg.Set spectre, "Enable protection vs Spectre1.1");
                  ("-o", Arg.Set_string output_file, "Save the processed source code in a file")]
 
 let () =
@@ -24,7 +22,7 @@ let () =
             | "simple" -> (module Blade.SimpleWeight : Blade.WeightModel)
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
-          let final_ast = Blade.Blade.blade weights ast in
+          let final_ast = Blade.Blade.blade weights !spectre ast in
           if !output_file <> "" then 
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);
