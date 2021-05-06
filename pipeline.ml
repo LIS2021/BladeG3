@@ -53,9 +53,10 @@ let () =
           Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
           (match eval conf spec cost with
             | Ok (conf', obs, count) -> 
-                Printf.printf "\nobs:\n[%s]\n\n"
-                  (List.fold_left (fun it o -> Printf.sprintf "%s%s; " it (Ast.string_of_observation o)) "" obs);
-                Printf.printf "\ncount: %d\n" count
+                if !verbose then
+                  Printf.printf "\n%s" (Evaluator.string_of_verbose (conf', obs, count))
+                else 
+                  Printf.printf "\ncount: %d\n" count
             | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
       | None -> failwith "cannot parse input file"
   with e ->
