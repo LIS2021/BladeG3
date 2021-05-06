@@ -7,7 +7,9 @@ let usage_msg = "pipe [--blade] <file>"
 let input_file = ref ""
 let output_file = ref ""
 let weight_model = ref ""
+let spectre = ref false
 let spec_list = [("--weights", Arg.Set_string weight_model, "Select weights model for blade");
+                 ("-s1.1", Arg.Set spectre, "Enable protection vs Spectre1.1");
                  ("-o", Arg.Set_string output_file, "Save the processed source code in a file")]
 
 let () =
@@ -20,7 +22,7 @@ let () =
             | "simple" -> (module Blade.SimpleWeight : Blade.WeightModel)
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
-          let final_ast = Blade.Blade.blade weights ast in
+          let final_ast = Blade.Blade.blade weights !spectre ast in
           if !output_file <> "" then 
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);

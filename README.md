@@ -38,6 +38,7 @@ The available options for the `pipe` executable are the following:
             --blade:                     Enable blade optimization
             --model [uniform|simple]:    Select cost model for evaluation
             --weights [constant|simple]: Select weights model for blade
+            -s1.1:                       Enable protection vs Spectre1.1
             -v:                          Enable verbose output
             -t <file>:                   Dumps the trace execution in <file>.trace
             -o <file>:                   Save the processed source code in <file>.out
@@ -47,6 +48,7 @@ The available options for the `run_blade` executable are the following:
         OPTIONS:
             
             --weights [constant|simple]: Select weights model for blade
+            -s1.1:                       Enable protection vs Spectre1.1
             -o <file>:                   Save the processed source code in <file>.out
 
 

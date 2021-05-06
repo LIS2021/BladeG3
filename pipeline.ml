@@ -15,6 +15,7 @@ let enable_blade = ref false
 let verbose = ref false
 let cost_model = ref ""
 let weight_model = ref ""
+let spectre = ref false
 let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("--model", Arg.Set_string cost_model, "Select cost model for evaluation");
                  ("--weights", Arg.Set_string weight_model, "Select weights model for blade");
@@ -33,8 +34,7 @@ let () =
             | "simple" -> (module Blade.SimpleWeight : Blade.WeightModel)
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
-          let spectre = if !spectre then true else false in
-          let final_ast = if !enable_blade then Blade.Blade.blade weights ast spectre else ast in
+          let final_ast = if !enable_blade then Blade.Blade.blade weights !spectre ast else ast in
           if !output_file <> "" then 
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);

@@ -158,9 +158,7 @@ module HashTableGen : DefUseGen = struct
         | ArrAssign (a, e1, e2) ->
             let index = populate_graph_exp gen e1 cost in
             let e = populate_graph_exp gen e2 cost in
-            if spectre then 
-              gen.g <- G.set_edge gen.g (e, sink) (cost_f c cost) 
-            else ();
+            if spectre then (gen.g <- G.set_edge gen.g (e, sink) (cost_f c cost));
             gen.g <- G.set_edge gen.g (index, sink) (cost_f c cost);
             gen
         | Seq (c1, c2) -> 
