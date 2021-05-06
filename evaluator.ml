@@ -12,14 +12,19 @@ let string_of_configuration (conf : configuration) : string =
   "is:\n" ^ (List.fold_left (fun it i -> Printf.sprintf "%s%s;\n" it (string_of_instruction i)) "" conf.is) ^ "\n\n" ^
   "cs:\n" ^ (List.fold_left (fun it c -> Printf.sprintf "%s%s;\n" it (string_of_cmd c)) "" conf.cs) ^ "\n\n" ^
   "mu: [ " ^ (Array.fold_left (fun it v -> Printf.sprintf "%s%d; " it v) "" conf.mu) ^ "]\n\n" ^
-  "rho: { " ^ (StringMap.fold (fun k v it -> Printf.sprintf "%s%s: %s; " it k (string_of_value v)) conf.rho "") ^ "}\n\n"
+  "rho: { " ^ (StringMap.fold (fun k v it -> Printf.sprintf "%s%s: %s; " it k (string_of_value v)) conf.rho "") ^ "}\n\n";;
 
 let string_of_output ((conf : configuration), (obs : observation list), (count : int)) : string =
   String.make 20 '-' ^ "\n\n" ^
   string_of_configuration conf ^
   "obs:\n[ " ^ (List.fold_left (fun it o -> Printf.sprintf "%s%s; " it (string_of_observation o)) "" obs) ^ "]\n\n" ^
-  "count: " ^ (string_of_int count) ^ "\n\n"
+  "count: " ^ (string_of_int count) ^ "\n\n";;
 
+let string_of_verbose ((conf : configuration), (obs : observation list), (count : int)) : string =
+  "mu: [ " ^ (Array.fold_left (fun it v -> Printf.sprintf "%s%d; " it v) "" conf.mu) ^ "]\n\n" ^
+  "rho: { " ^ (StringMap.fold (fun k v it -> Printf.sprintf "%s%s: %s; " it k (string_of_value v)) conf.rho "") ^ "}\n\n" ^
+  "obs:\n[ " ^ (List.fold_left (fun it o -> Printf.sprintf "%s%s; " it (string_of_observation o)) "" obs) ^ "]\n\n" ^
+  "count: " ^ (string_of_int count) ^ "\n\n";;
 
 (** Module modeling the template of a cost model **)
 module type CostModel = sig
@@ -165,8 +170,8 @@ let rec evalExpr (e : expr) (rho : value StringMap.t) : value vmresult =
         pure (CstB (v1 < v2))
     | BinOp(e1, e2, BitAnd) ->
         let* v1 = evalExpr e1 rho >>= checkInteger
-        and+ v2 = evalExpr e2 rho >>= checkInteger in
-        pure (CstI (v1 land v2))
+        and+ v2 = evalExpr e2 rho >>= checkBoolean in
+        pure (CstI (if v2 then v1 else 0))
     | InlineIf(e1, e2, e3) ->
         let* b1 = evalExpr e1 rho >>= checkBoolean in
         if b1 then evalExpr e2 rho else evalExpr e3 rho
