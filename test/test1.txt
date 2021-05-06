@@ -1,8 +1,8 @@
 x := 0;
 
 (while x < 10 do
-y := {0,10}[x];
-x := x + 1);
+  y := {0,10}[x];
+  x := x + 1);
 z := y;
 
 if z then skip; skip else skip
