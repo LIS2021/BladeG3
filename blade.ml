@@ -93,9 +93,9 @@ module Blade : IBlade = struct
             | While(e, c) -> While(e, protect_cmd c lprot)
             | Protect(id, p, r) -> c
 
-    let blade (model : (module WeightModel)) (c : cmd) : cmd = 
+    let blade (model : (module WeightModel)) (c : cmd) : (spectre: bool) cmd = 
         let module C = (val model : WeightModel) in
-        let gen = H.populate_graph c C.cost_f C.cost_r false in
+        let gen = H.populate_graph c C.cost_f C.cost_r spectre in
         let g = H.get_graph gen in
         let pairs = H.get_pairs gen in
         let (_, cut) = G.edmonds_karp g in
