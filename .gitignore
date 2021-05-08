@@ -7,3 +7,5 @@ pipe
 run_blade
 *.out
 *.trace
+_build
+*.native
