@@ -15,8 +15,7 @@ let i32_const (i : int) = L.const_int i32_t i;;
 let lmodule = L.create_module context "BLADEVM";;
 
 let fmain = L.define_function "main" fmain_t lmodule;;
-
-let get_tmp_addr unit : string = "tmp";;
+let fphony_fence = L.define_function "phony_fence" fmain_t lmodule;;
 
 let builder_try unit : unit =
   let builder = L.builder_at_end context (L.entry_block fmain) in
@@ -30,6 +29,29 @@ let builder_try unit : unit =
   let z = L.build_add x y "z" builder in
   let _ = L.build_store z r_z builder in
   L.build_ret_void builder |> ignore;;
+
+
+let inject_fence (ir : string) (phony : string) (repl : string) : string =
+  let irl = ir |> String.to_seq |> List.of_seq in
+  let phonyl = phony |> String.to_seq |> List.of_seq in
+  let repll = repl |> String.to_seq |> List.of_seq in
+  let rec check_match (irl : char list) (phonyl : char list) (prev : char list) : (char list * char list) =
+    match irl, phonyl with
+      | i :: irl', p :: phonyl' ->
+          if i = p then check_match irl' phonyl' (prev @ [i])
+          else [List.hd prev], (List.tl prev) @ irl
+      | _, [] -> repll, irl
+      | [], p :: _ -> prev, [] in
+  let rec helper (irl : char list) (phonyl : char list) : char list = 
+    match irl, phonyl with
+      | i :: irl', p :: phonyl' -> 
+          if i = p then 
+            let prev, cont = check_match irl' phonyl' [i] in
+            prev @ (helper cont phonyl)
+          else i :: helper irl' phonyl
+      | [], _ -> []
+      | i :: irl', [] -> irl in
+  helper irl phonyl |> List.to_seq |> String.of_seq
 
 
 let rec build_expr (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (e : expr) : (L.llvalue * L.llbuilder) =
@@ -79,32 +101,45 @@ let build_rhs (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) 
         let ptr = L.build_gep mu [| ve |] "eptr" builder in
         let vptr = L.build_load ptr "ve" builder in
         vptr, builder
-    | _ -> failwith "not reachable";;
-
+    | ArrayRead(a, e1) -> 
+        let bthen = L.append_block context "then" fmain in
+        let belse = L.append_block context "else" fmain in
+        let bcont = L.append_block context "cont" fmain in
+        (* condition *)
+        let ve1, builder = build_expr rho mu builder e1 in
+        let be = L.build_icmp L.Icmp.Slt ve1 (i32_const a.length) "be" builder in
+        let _ = L.build_cond_br be bthen belse builder in
+        (* then *)
+        let builder_then = L.builder_at_end context bthen in
+        let ve' = L.build_add (i32_const a.base) ve1 "vep" builder in
+        let ptr = L.build_gep mu [| ve' |] "epptr" builder in
+        let vrt = L.build_load ptr "vrt" builder in 
+        let _ = L.build_br bcont builder_then in
+        (* else *)
+        let builder_else = L.builder_at_end context belse in
+        let _ = L.build_ret_void builder in
+        let vrf = i32_const 0 in
+        let _ = L.build_br bcont builder_else in
+        (* cont. *)
+        let builder_cont = L.builder_at_end context bcont in
+        let phi = L.build_phi [(vrt, bthen); (vrf, belse)] "phi" builder_cont in
+        phi, builder_cont
 
 let rec build_cmd (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (c : cmd) : L.llbuilder =
   match c with
     | Skip -> builder
     | Fail -> let _ = L.build_ret_void builder in builder
     | VarAssign(id, rhs) ->
-        (match rhs with
-          | ArrayRead(a, e1) ->
-              let e = BinOp(e1, Length(Cst(CstA(a))), Lt) in
-              let e' = BinOp(Base(Cst(CstA(a))), e1, Add) in
-              let c' = If(e, (VarAssign(id, PtrRead(e', a.label))), Fail) in
-              build_cmd rho mu builder c'
-          | Expr _
-          | PtrRead _ ->
-              let vrhs, builder = build_rhs rho mu builder rhs in
-              (match Hashtbl.find_opt rho id with
-                | Some(lval) -> 
-                    let _ = L.build_store vrhs lval builder in
-                    builder
-                | None ->
-                    let lval = L.build_alloca i32_t id builder in
-                    let _ = L.build_store vrhs lval builder in
-                    Hashtbl.add rho id lval;
-                    builder))
+        let vrhs, builder = build_rhs rho mu builder rhs in
+        let lval', builder = 
+          (match Hashtbl.find_opt rho id with
+            | Some(lval) -> lval, builder
+            | None ->
+                let lval = L.build_alloca i32_t id builder in
+                Hashtbl.add rho id lval;
+                lval, builder) in
+        let _ = L.build_store vrhs lval' builder in
+        builder
     | PtrAssign(e1, e2, _) -> 
         let ve1, builder = build_expr rho mu builder e1 in
         let ve2, builder = build_expr rho mu builder e2 in
@@ -146,26 +181,35 @@ let rec build_cmd (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (c : c
         let builder_while = build_cmd rho mu builder_while c1 in
         let _ = L.build_br bcond builder_while in
         L.builder_at_end context bfoll
-    | _ -> failwith "Not implemented";;
+    | Protect(id, Slh, ArrayRead(a, e)) ->
+        let ve, builder = build_expr rho mu builder e in
+        let be1 = L.build_icmp L.Icmp.Slt ve (i32_const a.length) "be1" builder in
+        let nbe1 = L.build_not be1 "nbe1" builder in
+        let ve1 = L.build_zext nbe1 i32_t "ve1" builder in
+        let vr = L.build_add (i32_const (-1)) ve1 "r" builder in                (* ?????????? *)
+        let ve2 = L.build_add (i32_const a.base) ve "ve2" builder in
+        let masked = L.build_and vr ve2 "masked" builder in
+        let lval', builder = 
+          (match Hashtbl.find_opt rho id with
+            | Some(lval) -> lval, builder
+            | None ->
+                let lval = L.build_alloca i32_t id builder in
+                Hashtbl.add rho id lval;
+                lval, builder) in
+        let ptr = L.build_gep mu [| masked |] "maskedptr" builder in
+        let vmasked = L.build_load ptr "vmasked" builder in
+        let _ = L.build_store vmasked lval' builder in
+        builder
+    | Protect(id, _, rhs) -> 
+        let vrhs, builder = build_rhs rho mu builder rhs in
+        let _ = L.build_call fphony_fence [||] "" builder in
+        let lval', builder = (match Hashtbl.find_opt rho id with
+          | Some(lval) -> lval, builder
+          | None ->
+              let lval = L.build_alloca i32_t id builder in
+              Hashtbl.add rho id lval;
+              lval, builder) in
+        let _ = L.build_store vrhs lval' builder in
+        builder
 
-let usage_msg = "llvm_eval.native <file>";;
-let input_file = ref "";;
-
-let () =
-  Arg.parse [] (fun s -> input_file := s) usage_msg;
-  let in_file = open_in !input_file in
-  try
-    match Parser.parse_channel in_file with
-      | Some(c) ->
-          let builder = L.builder_at_end context (L.entry_block fmain) in
-          let mu = L.build_array_alloca i32_t (i32_const 100) "mu" builder in
-          let rho = Hashtbl.create 10 in
-          let builder = build_cmd rho mu builder c in
-          let _ = L.build_ret_void builder in
-          Printf.printf "%s\n" (L.string_of_llmodule lmodule);
-          L.dispose_module lmodule
-      | None -> failwith "Parsing error"
-  with e ->
-    close_in_noerr in_file;
-    raise e   
 

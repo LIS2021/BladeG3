@@ -1,4 +1,4 @@
-SRC=opal.ml ast.ml parser.ml graph.ml evaluator.ml def_use_gen.ml blade.ml utils.ml pipeline.ml llvm_eval.ml
+SRC=opal.ml ast.ml parser.ml graph.ml evaluator.ml def_use_gen.ml blade.ml utils.ml pipeline.ml lleval.ml llpipe.ml
 BLADE=opal.ml ast.ml parser.ml graph.ml def_use_gen.ml blade.ml run_blade.ml
 TEST_SRC=test/test_gen.ml test/test_graph.ml test/test0.ml test/test1.ml
 
