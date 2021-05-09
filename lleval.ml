@@ -2,7 +2,7 @@ open Ast;;
 
 module L = Llvm;;
 
-type var_ht = (identifier, L.llvalue) Hashtbl.t;;
+module VarMap = Map.Make(String);;
 
 let context = L.global_context ();;
 
@@ -15,8 +15,10 @@ let i32_const (i : int) = L.const_int i32_t i;;
 let lmodule = L.create_module context "BLADEVM";;
 
 let fmain = L.define_function "main" fmain_t lmodule;;
-let fphony_fence = L.define_function "phony_fence" fmain_t lmodule;;
+let fphony_fence = L.declare_function "phony_fence" fmain_t lmodule;;
+let ffail = L.declare_function "fail" fmain_t lmodule;;
 
+(*
 let builder_try unit : unit =
   let builder = L.builder_at_end context (L.entry_block fmain) in
   let r_x = L.build_alloca i32_t "rx" builder in
@@ -29,12 +31,17 @@ let builder_try unit : unit =
   let z = L.build_add x y "z" builder in
   let _ = L.build_store z r_z builder in
   L.build_ret_void builder |> ignore;;
+*)
 
+type injector = {
+    phony : string ;
+    repl : string ;
+};;
 
-let inject_fence (ir : string) (phony : string) (repl : string) : string =
+let inject_fence (ir : string) (inj : injector) : string =
   let irl = ir |> String.to_seq |> List.of_seq in
-  let phonyl = phony |> String.to_seq |> List.of_seq in
-  let repll = repl |> String.to_seq |> List.of_seq in
+  let phonyl = inj.phony |> String.to_seq |> List.of_seq in
+  let repll = inj.repl |> String.to_seq |> List.of_seq in
   let rec check_match (irl : char list) (phonyl : char list) (prev : char list) : (char list * char list) =
     match irl, phonyl with
       | i :: irl', p :: phonyl' ->
@@ -54,11 +61,11 @@ let inject_fence (ir : string) (phony : string) (repl : string) : string =
   helper irl phonyl |> List.to_seq |> String.of_seq
 
 
-let rec build_expr (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (e : expr) : (L.llvalue * L.llbuilder) =
+let rec build_expr (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (e : expr) : (L.llvalue * L.llbuilder) =
   match e with
     | Cst(CstI(i)) -> i32_const i, builder
     | Var(x) -> 
-        (match Hashtbl.find_opt rho x with
+        (match VarMap.find_opt x rho with
           | Some(lval) -> L.build_load lval x builder, builder
           | None -> failwith "syntax error")
     | BinOp(e1, e2, op) ->
@@ -93,7 +100,7 @@ let rec build_expr (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (e : 
     | _ -> failwith "syntax error";;
 
 
-let build_rhs (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) : (L.llvalue * L.llbuilder) =
+let build_rhs (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) : (L.llvalue * L.llbuilder) =
   match r with
     | Expr(e) -> build_expr rho mu builder e
     | PtrRead(e, _) ->
@@ -111,13 +118,13 @@ let build_rhs (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) 
         let _ = L.build_cond_br be bthen belse builder in
         (* then *)
         let builder_then = L.builder_at_end context bthen in
-        let ve' = L.build_add (i32_const a.base) ve1 "vep" builder in
-        let ptr = L.build_gep mu [| ve' |] "epptr" builder in
-        let vrt = L.build_load ptr "vrt" builder in 
+        let ve' = L.build_add (i32_const a.base) ve1 "vep" builder_then in
+        let ptr = L.build_gep mu [| ve' |] "epptr" builder_then in
+        let vrt = L.build_load ptr "vrt" builder_then in 
         let _ = L.build_br bcont builder_then in
         (* else *)
         let builder_else = L.builder_at_end context belse in
-        let _ = L.build_ret_void builder in
+        let _ = L.build_call ffail [||] "" builder_else in
         let vrf = i32_const 0 in
         let _ = L.build_br bcont builder_else in
         (* cont. *)
@@ -125,19 +132,15 @@ let build_rhs (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) 
         let phi = L.build_phi [(vrt, bthen); (vrf, belse)] "phi" builder_cont in
         phi, builder_cont
 
-let rec build_cmd (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (c : cmd) : L.llbuilder =
+let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (c : cmd) : L.llbuilder =
   match c with
     | Skip -> builder
-    | Fail -> let _ = L.build_ret_void builder in builder
+    | Fail -> let _ = L.build_call ffail [||] "" builder in builder
     | VarAssign(id, rhs) ->
         let vrhs, builder = build_rhs rho mu builder rhs in
-        let lval', builder = 
-          (match Hashtbl.find_opt rho id with
-            | Some(lval) -> lval, builder
-            | None ->
-                let lval = L.build_alloca i32_t id builder in
-                Hashtbl.add rho id lval;
-                lval, builder) in
+        let lval' = (match VarMap.find_opt id rho with
+            | Some(lval) -> lval
+            | None -> failwith "syntax error") in
         let _ = L.build_store vrhs lval' builder in
         builder
     | PtrAssign(e1, e2, _) -> 
@@ -189,13 +192,9 @@ let rec build_cmd (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (c : c
         let vr = L.build_add (i32_const (-1)) ve1 "r" builder in                (* ?????????? *)
         let ve2 = L.build_add (i32_const a.base) ve "ve2" builder in
         let masked = L.build_and vr ve2 "masked" builder in
-        let lval', builder = 
-          (match Hashtbl.find_opt rho id with
-            | Some(lval) -> lval, builder
-            | None ->
-                let lval = L.build_alloca i32_t id builder in
-                Hashtbl.add rho id lval;
-                lval, builder) in
+        let lval' = (match VarMap.find_opt id rho with
+            | Some(lval) -> lval
+            | None -> failwith "syntax error") in
         let ptr = L.build_gep mu [| masked |] "maskedptr" builder in
         let vmasked = L.build_load ptr "vmasked" builder in
         let _ = L.build_store vmasked lval' builder in
@@ -203,13 +202,56 @@ let rec build_cmd (rho : var_ht) (mu : L.llvalue) (builder : L.llbuilder) (c : c
     | Protect(id, _, rhs) -> 
         let vrhs, builder = build_rhs rho mu builder rhs in
         let _ = L.build_call fphony_fence [||] "" builder in
-        let lval', builder = (match Hashtbl.find_opt rho id with
-          | Some(lval) -> lval, builder
-          | None ->
-              let lval = L.build_alloca i32_t id builder in
-              Hashtbl.add rho id lval;
-              lval, builder) in
+        let lval' = (match VarMap.find_opt id rho with
+          | Some(lval) -> lval
+          | None -> failwith "syntax error") in
         let _ = L.build_store vrhs lval' builder in
-        builder
+        builder;;
+
+let build_decl (builder : L.llbuilder) (c : cmd) : (L.llvalue VarMap.t * L.llbuilder * int) =
+  let rec helper (rho : L.llvalue VarMap.t) (mud : int) (builder : L.llbuilder) (c : cmd) : (L.llvalue VarMap.t * L.llbuilder * int) =
+    match c with 
+      | VarAssign(id, r)
+      | Protect(id, _, r) -> 
+          let rho', builder' = (match VarMap.find_opt id rho with
+            | Some(_) -> rho, builder
+            | None ->
+                let lval = L.build_alloca i32_t id builder in
+                VarMap.add id lval rho, builder) in
+          let mud' = (match r with
+            | ArrayRead(a, e) -> a.length + a.base
+            | _ -> mud) in
+          rho', builder', (if mud' > mud then mud' else mud)
+      | ArrAssign(a, _, _) -> 
+          let mud' = a.length + a.base in
+          rho, builder, (if mud' > mud then mud' else mud)
+      | Seq(c1, c2)
+      | If(_, c1, c2) ->
+          let rho', builder', mud' = helper rho mud builder c1 in
+          helper rho' mud' builder' c2
+      | While(_, c1) -> helper rho mud builder c1
+      | _ -> rho, builder, mud in
+  helper VarMap.empty 0 builder c;;
+
+
+
+let fence_injector : injector =
+  {
+    phony = "call void @phony_fence()";
+    repl = "fence seq_cst";
+  };;
+
+let build_ir (ast : cmd) (fancy : bool) : string =
+  let builder = L.builder_at_end context (L.entry_block fmain) in
+  let rho, builder, mud = build_decl builder ast in
+  let mu = L.build_array_alloca i32_t (i32_const mud) "mu" builder in
+  let builder = build_cmd rho mu builder ast in
+  let _ = L.build_ret_void builder in
+  let ir = L.string_of_llmodule lmodule in
+  if fancy then inject_fence ir fence_injector else ir
+ 
+
+  
+
 
 
