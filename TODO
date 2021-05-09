@@ -1,5 +1,5 @@
-Possiamo cambiare la configuration rimuovendo i mutable
+llvm
 
-Dobbiamo implementare step e eval separatamente?
-
-I valori bottom servono per la speculazione?
+[ ] Gestione errori monadica
+[ ] Print del tempo di esecuzione
+[ ] È corretto implementare la slh senza passare in memoria la mask?

@@ -9,6 +9,7 @@ let context = L.global_context ();;
 let void_t = L.void_type context;;
 let i32_t = L.i32_type context;;
 let fmain_t = L.function_type void_t [||];;
+let ffail_t = L.function_type void_t [| (* i32_t *) |];;
 
 let i32_const (i : int) = L.const_int i32_t i;;
 
@@ -16,22 +17,32 @@ let lmodule = L.create_module context "BLADEVM";;
 
 let fmain = L.define_function "main" fmain_t lmodule;;
 let fphony_fence = L.declare_function "phony_fence" fmain_t lmodule;;
-let ffail = L.declare_function "fail" fmain_t lmodule;;
+let ffail = L.declare_function "fail" ffail_t lmodule;;
 
-(*
-let builder_try unit : unit =
-  let builder = L.builder_at_end context (L.entry_block fmain) in
-  let r_x = L.build_alloca i32_t "rx" builder in
-  let r_y = L.build_alloca i32_t "ry" builder in
-  let r_z = L.build_alloca i32_t "rz" builder in
-  let _ = L.build_store (i32_const 3) r_x builder in
-  let _ = L.build_store (i32_const 4) r_y builder in
-  let x = L.build_load r_x "x" builder in
-  let y = L.build_load r_y "y" builder in
-  let z = L.build_add x y "z" builder in
-  let _ = L.build_store z r_z builder in
-  L.build_ret_void builder |> ignore;;
-*)
+let print_mu (mu : L.llvalue) (dim : int) (builder : L.llbuilder) : L.llbuilder =
+  let mu_t = L.type_of mu in
+  let fprintmu_t = L.function_type void_t [| mu_t; i32_t |] in
+  let fprintmu = L.declare_function "printmu" fprintmu_t lmodule in
+  let _ = L.build_call fprintmu [| mu; (i32_const dim) |] "" builder in
+  builder;;
+
+let print_var (rho : L.llvalue VarMap.t) (builder : L.llbuilder) : L.llbuilder =
+  let max_id = VarMap.fold (fun k v it -> let ln = String.length k in (if ln > it then ln else it)) rho 0 in
+  let idarr = L.build_array_alloca i32_t (i32_const max_id) "idarr" builder in
+  let idarr_t = L.type_of idarr in
+  let fprintvar_t = L.function_type void_t [| idarr_t; i32_t; i32_t |] in
+  let fprintvar = L.declare_function "printvar" fprintvar_t lmodule in
+  let store_char (i : int) (c : int) : unit =
+    let gep = L.build_gep idarr [| i32_const i |] "ptr" builder in
+    L.build_store (i32_const c) gep builder |> ignore in
+  let var_iterator (id : string) (lval : L.llvalue) : unit =
+    let ch = id |> String.to_seq |> List.of_seq in
+    let ch' = List.map (fun c -> Char.code c) ch in
+    List.iteri store_char ch';
+    let var = L.build_load lval id builder in
+    L.build_call fprintvar [| idarr; (i32_const (String.length id)); var |] "" builder |> ignore in
+  VarMap.iter var_iterator rho;
+  builder;; 
 
 type injector = {
     phony : string ;
@@ -124,18 +135,20 @@ let build_rhs (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder
         let _ = L.build_br bcont builder_then in
         (* else *)
         let builder_else = L.builder_at_end context belse in
-        let _ = L.build_call ffail [||] "" builder_else in
+        let _ = L.build_call ffail [| (* i32_const (-1) *) |] "" builder_else in
         let vrf = i32_const 0 in
         let _ = L.build_br bcont builder_else in
         (* cont. *)
         let builder_cont = L.builder_at_end context bcont in
         let phi = L.build_phi [(vrt, bthen); (vrf, belse)] "phi" builder_cont in
-        phi, builder_cont
+        phi, builder_cont;; 
+
+(* let cont = ref 0;; *)
 
 let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (c : cmd) : L.llbuilder =
   match c with
     | Skip -> builder
-    | Fail -> let _ = L.build_call ffail [||] "" builder in builder
+    | Fail -> let _ = L.build_call ffail [| (* i32_const !cont *) |] "" builder in builder
     | VarAssign(id, rhs) ->
         let vrhs, builder = build_rhs rho mu builder rhs in
         let lval' = (match VarMap.find_opt id rho with
@@ -150,6 +163,14 @@ let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbui
         let _ = L.build_store ve2 ptr builder in
         builder
     | ArrAssign(a, e1, e2) ->
+        (*
+        cont := !cont + 1;
+        (match e1 with 
+          | Var("k") -> 
+              let vk = L.build_load (VarMap.find "k" rho) "tk" builder in
+              L.build_call ffail [| vk |] "" builder |> ignore
+          | _ -> ());
+        *)
         let e = BinOp(e1, Length(Cst(CstA(a))), Lt) in
         let e' = BinOp(Base(Cst(CstA(a))), e1, Add) in
         let c' = If(e, (PtrAssign(e', e2, a.label)), Fail) in
@@ -233,25 +254,27 @@ let build_decl (builder : L.llbuilder) (c : cmd) : (L.llvalue VarMap.t * L.llbui
       | _ -> rho, builder, mud in
   helper VarMap.empty 0 builder c;;
 
-
-
-let fence_injector : injector =
-  {
-    phony = "call void @phony_fence()";
-    repl = "fence seq_cst";
-  };;
+let build_mu (dim : int) (builder : L.llbuilder) : L.llvalue =
+  let store_zero (mu : L.llvalue) (i : int) (z : int) : unit =
+    let gep = L.build_gep mu [| i32_const i |] "ptr" builder in
+    L.build_store (i32_const z) gep builder |> ignore in
+  let mu = L.build_array_alloca i32_t (i32_const dim) "mu" builder in
+  let ls_of_zero = List.init dim (fun _ -> 0) in
+  List.iteri (store_zero mu) ls_of_zero;
+  mu
 
 let build_ir (ast : cmd) (fancy : bool) : string =
+  let fence_injector =
+    { phony = "call void @phony_fence()";
+      repl = "fence seq_cst"; } in
   let builder = L.builder_at_end context (L.entry_block fmain) in
   let rho, builder, mud = build_decl builder ast in
-  let mu = L.build_array_alloca i32_t (i32_const mud) "mu" builder in
+  let mu = build_mu mud builder in
   let builder = build_cmd rho mu builder ast in
+  let builder = print_mu mu mud builder in
+  let builder = print_var rho builder in
   let _ = L.build_ret_void builder in
   let ir = L.string_of_llmodule lmodule in
   if fancy then inject_fence ir fence_injector else ir
  
-
-  
-
-
 
