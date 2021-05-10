@@ -25,7 +25,7 @@ module type DefUseGen = sig
   val get_graph: generated -> graph
 
   (* Returns the list of pairs present in the generated structure *)
-  val get_pairs : generated -> (node * identifier) list
+  val get_pairs : generated -> (node * (identifier * rhs)) list
 
   (* Creates, if not not already present, and returns a node *)
   val new_node: generated -> node_type -> node
@@ -54,11 +54,11 @@ module HashTableGen : DefUseGen = struct
   type graph = G.graph
   (** The generated structure modeled as:
       an hashtable containing the nodes generated so far and their number identifier
-      a list of node identifiers and variable identifiers (to be protected)
+      a list of node identifiers, variable identifiers and rhs (to be protected)
       a graph **)
   type generated = {
     hasht: (node_type, node) Hashtbl.t;
-    mutable pairs: (node * identifier) list;
+    mutable pairs: (node * (identifier * rhs)) list;
     mutable g: graph;
   }
 
@@ -71,7 +71,7 @@ module HashTableGen : DefUseGen = struct
 
   let get_graph (gen: generated) : graph = gen.g
 
-  let get_pairs (gen: generated) : (node * identifier) list = gen.pairs
+  let get_pairs (gen: generated) : (node * (identifier * rhs)) list = gen.pairs
 
   let new_node (gen: generated) (node_name: node_type) : node =
     match Hashtbl.find_opt gen.hasht node_name with 
@@ -145,7 +145,7 @@ module HashTableGen : DefUseGen = struct
             let id_node = new_node gen (NVar id) in
             let rhs_node = populate_graph_rhs gen rhs cost in
             gen.g <- G.set_edge gen.g (rhs_node, id_node) (cost_f c cost);
-            gen.pairs <- (id_node, id) :: gen.pairs;
+            gen.pairs <- (id_node, (id, rhs)) :: gen.pairs;
             gen
         | PtrAssign (e1, e2, l) ->
             let ptr = populate_graph_exp gen e1 cost in
@@ -192,9 +192,9 @@ module HashTableGen : DefUseGen = struct
       Printf.printf "{\n";
       Hashtbl.iter (fun t n -> Printf.printf "\t(%s) -> %s\n"  (strNt t) (G.str_node n)) h;
       Printf.printf "}\n\n"; in
-    let print_pairs (pls : (node * identifier) list) : unit =
+    let print_pairs (pls : (node * (identifier * rhs)) list) : unit =
         Printf.printf "[ ";
-        List.iter (fun (n, i) -> Printf.printf "(%s, %s) " (G.str_node n) i) gen.pairs;
+        List.iter (fun (n, (i, _)) -> Printf.printf "(%s, %s) " (G.str_node n) i) gen.pairs;
         Printf.printf "]\n\n"; in
     print_hashtbl gen.hasht;
     print_pairs gen.pairs;

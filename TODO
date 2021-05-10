@@ -1,5 +1,10 @@
 llvm
 
-[ ] Gestione errori monadica
+[x] Gestione errori monadica
 [ ] Print del tempo di esecuzione
 [ ] È corretto implementare la slh senza passare in memoria la mask?
+[x] Rimuovere ottimizzazioni da llvm
+
+vm
+
+[x] Risolvere bug protect ripetute

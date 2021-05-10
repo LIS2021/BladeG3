@@ -14,19 +14,19 @@ pipe: $(SRC)
 run_blade: $(BLADE)
 	ocamlopt -o $@ $(BLADE)
 
+llpipe: $(SRC)
+	ocamlbuild -pkgs "llvm llvm.bitwriter" $@.native
+
 %.native: $(SRC)
 	ocamlbuild -pkgs "llvm llvm.bitwriter" $@
 
-test%: 
-	clang -emit-llvm -c -S llfuncs.c -o llfuncs.bc
-	ocamlbuild -pkgs "llvm llvm.bitwriter" llpipe.native
-	./llpipe.native --fancy --blade test/$@.txt > $@.ll
-	llvm-as $@.ll
-	llvm-link $@.bc llfuncs.bc -o $@-lnk.bc
-	llc -filetype=obj $@-lnk.bc -o $@.o
-	clang $@.o -o $@
-	rm -f *.o *.native *.bc
-	rm -rf _build
+llfuncs.bc: llfuncs.c
+	clang -emit-llvm -O0 -c -S $< -o $@
+
+%.bc: llfuncs.bc
+	llvm-as $*.ll -o $*-ul.bc
+	llvm-link $*-ul.bc llfuncs.bc -o $@
+	rm -f $*-ul.bc llfuncs.bc
 
 clean:
 	rm -f test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test pipe run_blade *.trace *.out *.native *.ll *.bc ${OBJ}
