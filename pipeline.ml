@@ -5,7 +5,7 @@
     [--weights]     : choose the model of weights between "simple" or "constant"
     [-v]            : using this flag enables verbose output
     [-t] [out.txt]  : using this flag dumps the trace execution in the given file
-    [-o] [out.txt]  : using this flag dumps the result in the given file 
+    [-o] [out.txt]  : using this flag dumps the result in the given file
 **)
 let usage_msg = "pipe [OPTIONS] <file>"
 let input_file = ref ""
@@ -15,10 +15,12 @@ let enable_blade = ref false
 let verbose = ref false
 let cost_model = ref ""
 let weight_model = ref ""
+let speculator = ref ""
 let spectre = ref false
 let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("--model", Arg.Set_string cost_model, "Select cost model for evaluation");
                  ("--weights", Arg.Set_string weight_model, "Select weights model for blade");
+                 ("--speculator", Arg.Set_string speculator, "Select the virtual machine speculation model");
                  ("-s1.1", Arg.Set spectre, "Enable protection vs Spectre1.1");
                  ("-v", Arg.Set verbose, "Enable verbose output");
                  ("-t", Arg.Set_string trace_file, "Dumps the trace execution in a file");
@@ -35,18 +37,21 @@ let () =
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights !spectre ast else ast in
-          if !output_file <> "" then 
+          if !output_file <> "" then
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);
               with e -> close_out_noerr out_file));
           let conf = Evaluator.defaultConfiguration final_ast 100 in
-          let spec = Evaluator.defaultSpeculator Random.bool in
+          let spec = (match !speculator with
+            | "outoforder" -> (module Evaluator.OutOfOrderSpeculator : Evaluator.Speculator)
+            | "default"
+            | _            -> Evaluator.defaultSpeculator Random.bool) in
           let cost = (match !cost_model with
             | "fence"  -> (module Evaluator.FenceSensitiveCost : Evaluator.CostModel)
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
             | "uniform"
             | _        -> (module Evaluator.UniformCost : Evaluator.CostModel)) in
-          let eval = (if !trace_file <> "" then 
+          let eval = (if !trace_file <> "" then
             (fun conf spec cost ->
               let out_tr = (open_out (!trace_file ^ ".trace")) in
               (try Evaluator.evalWithTrace out_tr conf spec cost
@@ -54,10 +59,10 @@ let () =
             else Evaluator.eval) in
           Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
           (match eval conf spec cost with
-            | Ok (conf', obs, count) -> 
+            | Ok (conf', obs, count) ->
                 if !verbose then
                   Printf.printf "\n%s" (Evaluator.string_of_verbose (conf', obs, count))
-                else 
+                else
                   Printf.printf "\ncount: %d\n" count
             | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
       | None -> failwith "cannot parse input file"

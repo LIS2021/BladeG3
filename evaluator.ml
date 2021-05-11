@@ -151,7 +151,6 @@ let rec pending (is : instruction list) : guard_fail_id list =
     | IFail(p) :: is            -> p :: pending is
     | i :: is                  -> pending is;;
 
-
 let rec evalExpr (e : expr) (rho : value StringMap.t) : value vmresult =
   match e with
     | Cst(v) -> pure v
@@ -181,6 +180,59 @@ let rec evalExpr (e : expr) (rho : value StringMap.t) : value vmresult =
     | Base(e) ->
         let* a = evalExpr e rho >>= checkArray in
         pure (CstI a.base);;
+
+let canFetch (conf : configuration) : bool =
+  match conf.cs with
+    | Skip :: _
+    | Fail :: _
+    | VarAssign(_, _) :: _
+    | Seq(_, _) :: _
+    | PtrAssign(_, _, _) :: _
+    | ArrAssign(_, _, _) :: _
+    | While(_, _) :: _
+    | Protect(_, _, _) :: _ -> true
+    | _ -> false;;
+
+let canPFetch (conf : configuration) : bool =
+  match conf.cs with
+    | If(_, _, _) :: _ -> true
+    | _ -> false;;
+
+let canEval (conf : configuration) (n : int) : bool =
+  match splitIs conf.is n with
+    | Ok (fs, i, ls) -> let rho1 = phi conf.rho fs in
+        (match i with
+           | AssignE(_, e) ->
+               (match evalExpr e rho1 with
+                  | Error (UnassignedReference _) -> false
+                  | _ -> true)
+           | Guard(e, _, _, _) ->
+               (match evalExpr e rho1 with
+                  | Error (UnassignedReference _) -> false
+                  | _ -> true)
+           | IProtectE(_, _, e) ->
+               (match evalExpr e rho1 with
+                  | Error (UnassignedReference _) -> false
+                  | _ -> true)
+           | Load(x, l, e) -> if (List.exists (fun i -> isStore i || isFence i) fs) then false else
+               (match evalExpr e rho1 with
+                  | Error (UnassignedReference _) -> false
+                  | _ -> true)
+           | StoreE(e1, e2) -> if (List.exists isFence fs) then false else
+               (match evalExpr e1 rho1, evalExpr e2 rho1 with
+                  | Error (UnassignedReference _), Error (UnassignedReference _) -> false
+                  | _, _ -> true)
+           | IProtectV(x, v) -> not (List.exists isGuard fs)
+           | _ -> false)
+    | _ -> false;;
+
+let canRetire (conf : configuration) : bool =
+  match conf.is with
+    | Nop :: _
+    | AssignV(_, _) :: _
+    | StoreV(_, _) :: _
+    | IFail(_) :: _ -> true
+    | _ -> false;;
 
 let stepFetch (conf: configuration) (obs : observation list) : (configuration * observation list) vmresult =
   match conf.cs with
@@ -347,6 +399,17 @@ let defaultSpeculator (dist : unit -> bool) : (module Speculator) =
          | _ :: _, _             -> Exec 0
          | _, _                  -> Fetch;;
   end)
+
+module OutOfOrderSpeculator : Speculator = struct
+  let speculate conf obs =
+    let ds = if canFetch conf then [Fetch] else [] in
+    let ds = if canPFetch conf then PFetch (Random.bool ()) :: ds else ds in
+    let ds = if canRetire conf then Retire :: ds else ds in
+    let execs = List.mapi (fun i _ -> i) conf.is |> List.filter (canEval conf) |> List.map (fun i -> Exec(i)) in
+    let ds = execs @ ds in
+    let len = List.length ds in
+    if len = 0 then Fetch else List.nth ds (Random.int len)
+end
 
 (** Simple implementation of the cost model
     where every instruction has the same cost
