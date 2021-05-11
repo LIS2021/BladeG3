@@ -220,7 +220,8 @@ let canEval (conf : configuration) (n : int) : bool =
                   | _ -> true)
            | StoreE(e1, e2) -> if (List.exists isFence fs) then false else
                (match evalExpr e1 rho1, evalExpr e2 rho1 with
-                  | Error (UnassignedReference _), Error (UnassignedReference _) -> false
+                  | _, Error (UnassignedReference _) -> false
+                  | Error (UnassignedReference _), _ -> false
                   | _, _ -> true)
            | IProtectV(x, v) -> not (List.exists isGuard fs)
            | _ -> false)
@@ -400,16 +401,22 @@ let defaultSpeculator (dist : unit -> bool) : (module Speculator) =
          | _, _                  -> Fetch;;
   end)
 
-module OutOfOrderSpeculator : Speculator = struct
-  let speculate conf obs =
-    let ds = if canFetch conf then [Fetch] else [] in
-    let ds = if canPFetch conf then PFetch (Random.bool ()) :: ds else ds in
-    let ds = if canRetire conf then Retire :: ds else ds in
-    let execs = List.mapi (fun i _ -> i) conf.is |> List.filter (canEval conf) |> List.map (fun i -> Exec(i)) in
-    let ds = execs @ ds in
-    let len = List.length ds in
-    if len = 0 then Fetch else List.nth ds (Random.int len)
-end
+let outOfOrderSpeculator (verbose : bool) : (module Speculator) =
+  (module struct
+     let speculate conf obs =
+       let ds = if canFetch conf then [Fetch] else [] in
+       let ds = if canPFetch conf then PFetch (Random.bool ()) :: ds else ds in
+       let ds = if canRetire conf then Retire :: ds else ds in
+       let execs = List.mapi (fun i _ -> i) conf.is |> List.filter (canEval conf) |> List.map (fun i -> Exec(i)) in
+       let ds = execs @ ds in
+       let len = List.length ds in
+       if len = 0 then
+         Fetch
+       else
+         let idx = Random.int len in
+         if verbose then Printf.printf "[%s] -> %d\n" (String.concat "; " (List.map string_of_directive ds)) idx;
+         List.nth ds idx
+  end)
 
 (** Simple implementation of the cost model
     where every instruction has the same cost

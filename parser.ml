@@ -16,7 +16,12 @@ let keywords =
 
 let identifier = (spaces >> letter <~> many alpha_num) => implode
                    >>= fun s -> if List.mem s keywords then mzero else return s;;
-let integer = spaces >> many1 digit => implode % int_of_string;;
+let integer input =
+  (spaces >>
+   let* op = option Fun.id (exactly '-' >> return Int.neg) in
+   let* n = many1 digit => implode % int_of_string in
+   return (op n)
+  ) input;;
 let boolean = (token "true" >> return true) <|> (token "false" >> return false);;
 let array = spaces >> between (token "{") (token "}")
                               (let* b = integer in

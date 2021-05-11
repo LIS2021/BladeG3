@@ -27,6 +27,7 @@ let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("-o", Arg.Set_string output_file, "Save the processed source code in a file")]
 
 let () =
+  Random.self_init ();
   Arg.parse spec_list (fun s -> input_file := s) usage_msg;
   let in_file = open_in !input_file in
   try
@@ -43,7 +44,7 @@ let () =
               with e -> close_out_noerr out_file));
           let conf = Evaluator.defaultConfiguration final_ast 100 in
           let spec = (match !speculator with
-            | "outoforder" -> (module Evaluator.OutOfOrderSpeculator : Evaluator.Speculator)
+            | "outoforder" -> Evaluator.outOfOrderSpeculator !verbose
             | "default"
             | _            -> Evaluator.defaultSpeculator Random.bool) in
           let cost = (match !cost_model with
