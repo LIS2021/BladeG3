@@ -93,11 +93,11 @@ let splitIs (ls : 'a list) (n : int) : ('a list * 'a * 'a list) vmresult =
 
 let rec countMemIstruction (is: instruction list) : int =
   match is with
-    | StoreE(_, _) : is' -> 
-    | StoreV(_, _) : is' ->  
-    | Load(_, _) : is' -> 1 + countMemIstruction is'
-    | _ : is' -> countMemIstruction is'
-    | _ -> 0
+    | StoreE(_, _) :: is'
+    | StoreV(_, _) :: is'
+    | Load(_, _, _) :: is' -> 1 + countMemIstruction is'
+    | _ :: is' -> countMemIstruction is'
+    | _ -> 0;;
 
 let isStore (i : instruction) : bool =
   match i with
@@ -408,15 +408,16 @@ end;;
     where the cost of the fence is determined by
     the amount of instruction "blocked" by the fence **)
 module FenceSpeculativeCost : CostModel = struct
-  let n_proc = 1 in
-  let mem_ist_cost = 10 in
+  let n_proc = 1
+  let mem_ist_cost = 10
+
   let cost dir conf =
     match dir, conf with
       | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
-      | Fetch, {is; cs = Protect (_, Fence, _) :: _; mu; rho} -> 
-        let c = countMemIstruction is in
-        let n = List.length is - c in
-        c * mem_ist_cost - (n / n_proc)
+      | Fetch, {is; cs = Protect (_, Fence, _) :: _; mu; rho} ->
+          let c = countMemIstruction is in
+          let n = List.length is - c in
+          max 0 (c * mem_ist_cost - (n / n_proc))
       | Fetch, _ -> 2
       | PFetch(_), _ -> 1
       | Exec(n), {is; cs; mu; rho}  ->

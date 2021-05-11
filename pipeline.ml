@@ -5,7 +5,7 @@
     [--weights]     : choose the model of weights between "simple" or "constant"
     [-v]            : using this flag enables verbose output
     [-t] [out.txt]  : using this flag dumps the trace execution in the given file
-    [-o] [out.txt]  : using this flag dumps the result in the given file 
+    [-o] [out.txt]  : using this flag dumps the result in the given file
 **)
 let usage_msg = "pipe [OPTIONS] <file>"
 let input_file = ref ""
@@ -35,7 +35,7 @@ let () =
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights !spectre ast else ast in
-          if !output_file <> "" then 
+          if !output_file <> "" then
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);
               with e -> close_out_noerr out_file));
@@ -44,9 +44,10 @@ let () =
           let cost = (match !cost_model with
             | "fence"  -> (module Evaluator.FenceSensitiveCost : Evaluator.CostModel)
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
+            | "fence2" -> (module Evaluator.FenceSpeculativeCost : Evaluator.CostModel)
             | "uniform"
             | _        -> (module Evaluator.UniformCost : Evaluator.CostModel)) in
-          let eval = (if !trace_file <> "" then 
+          let eval = (if !trace_file <> "" then
             (fun conf spec cost ->
               let out_tr = (open_out (!trace_file ^ ".trace")) in
               (try Evaluator.evalWithTrace out_tr conf spec cost
@@ -54,10 +55,10 @@ let () =
             else Evaluator.eval) in
           Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
           (match eval conf spec cost with
-            | Ok (conf', obs, count) -> 
+            | Ok (conf', obs, count) ->
                 if !verbose then
                   Printf.printf "\n%s" (Evaluator.string_of_verbose (conf', obs, count))
-                else 
+                else
                   Printf.printf "\ncount: %d\n" count
             | Error e -> Printf.printf "error: %s" (Evaluator.string_of_vmerror e))
       | None -> failwith "cannot parse input file"
