@@ -233,6 +233,7 @@ let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbui
         let ptr = L.build_gep mu [| masked |] "maskedptr" builder in
         let vmasked = L.build_load ptr "vmasked" builder in
         let _ = L.build_store vmasked lval' builder in
+        Printf.printf "slh\n";
         pure(builder)
     | Protect(id, _, rhs) -> 
         let* vrhs, builder = build_rhs rho mu builder rhs in
@@ -275,7 +276,7 @@ let build_mu (dim : int) (builder : L.llbuilder) : L.llvalue =
   List.iteri (store_zero mu) ls_of_zero;
   mu
 
-let build_ir (ast : cmd) (fancy : bool) : string llresult =
+let build_ir (ast : cmd) (ifence : bool) : string llresult =
   let fence_injector =
     { phony = "call void @phony_fence()";
       repl = "fence seq_cst"; } in
@@ -289,5 +290,5 @@ let build_ir (ast : cmd) (fancy : bool) : string llresult =
   let builder = print_var rho builder in
   let _ = L.build_ret_void builder in
   let ir = L.string_of_llmodule lmodule in
-  pure(if fancy then inject_fence ir fence_injector else ir);;
+  pure(if ifence then inject_fence ir fence_injector else ir);;
  

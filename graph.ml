@@ -56,9 +56,9 @@ module type Graph = sig
         returns a pair composed of a graph 
         and a list of node representing the cut list
         identified by the edmond karp algorithm **)
-    val edmonds_karp : graph -> (graph * node list)
+    val edmonds_karp : graph -> (graph * edge list)
 
-    val filter_assoc : (node * 'b) list -> node list -> 'b list
+    val filter_assoc : (edge * 'b) list -> edge list -> 'b list
 
 end
 
@@ -182,48 +182,48 @@ module UseGraph : Graph = struct
         let fe = (pred.(sink g), sink g) in
         folder (capacity g fe) fe
 
-    let update_graph (g : graph) (pred : node array) (max : int) : (graph * node) =
-        let rec updater (g : graph) ((v1, v2) : (node * node)) (cut : node) : (graph * node) =
+    let update_graph (g : graph) (pred : node array) (max : int) : (graph * edge) =
+        let rec updater (g : graph) ((v1, v2) : (node * node)) (cut : edge) : (graph * edge) =
             if v1 = (-1) then (g, cut) 
             else 
                 let cap = capacity g (v1, v2) in
                 let g' = set_edge g (v1, v2) (cap -? max) in
-                let cut' = if (cap -? max) = 0 && cut = (-1) then v2 else cut in
+                let cut' = if (cap -? max) = 0 && cut = (-1, -1) then (v1, v2) else cut in
                 updater g' (pred.(v1), v1) cut' in
-        updater g (pred.(sink g), sink g) (-1)
+        updater g (pred.(sink g), sink g) (-1, -1)
 
-    let edmonds_karp (g : graph) : (graph * node list) =
+    let edmonds_karp (g : graph) : (graph * edge list) =
         let g' = copy g in
-        let rec add_absent (cuts : node list) (c : node) : (node list) =
+        let rec add_absent (cuts : edge list) (e : edge) : (edge list) =
             match cuts with
                 | v :: vs -> 
-                        if v = c then v :: vs
-                        else v :: (add_absent vs c)
-                | [] -> [ c ] in
-        let rec helper (g : graph) (cuts : node list) : (graph * node list) = 
+                        if v = e then v :: vs
+                        else v :: (add_absent vs e)
+                | [] -> [ e ] in
+        let rec helper (g : graph) (cuts : edge list) : (graph * edge list) = 
             let (g, pred) = bfs_sp g in
             match pred.(sink g) with
                 | (-1) -> (g, cuts)
                 | _    -> let max = max_flow g pred in
-                          let (g, c) = update_graph g pred max in
-                          helper g (add_absent cuts c) in
+                          let (g, e) = update_graph g pred max in
+                          helper g (add_absent cuts e) in
         helper g' []
 
-    let filter_assoc (ls : (node * 'b) list) (nodes : node list) : ('b list) =
-        let ls_sorter ((n1, _) : int * 'b) ((n2, _) : int * 'b) : int = n1 - n2 in
-        let nodes_sorter (n1 : int) (n2 : int) : int = n1 - n2 in
+    let filter_assoc (ls : (edge * 'b) list) (edges : edge list) : ('b list) =
+        let ls_sorter ((e1, _) : edge * 'b) ((e2, _) : edge * 'b) : int = compare e1 e2 in
+        let edges_sorter = compare in
         let ls' = List.sort ls_sorter ls in
-        let nodes' = List.sort nodes_sorter nodes in
-        let rec helper (ls : (node * 'b) list) (nodes : node list) (acc : 'b list) : ('b list) =
-            match ls, nodes with
-                | (v, l) :: ls', n :: nodes' -> 
-                        if n = v then helper ls' nodes' (l :: acc)
-                        else 
-                            if n > v then helper ls' nodes acc
-                            else helper ls nodes' acc
-                | [], _ -> acc
-                | _, [] -> acc in
-        helper ls' nodes' []
+        let edges' = List.sort edges_sorter edges in
+        let rec helper (ls : (edge * 'b) list) (edges : edge list) (acc : 'b list) : ('b list) =
+          match ls, edges with
+            | (v, l) :: ls', n :: edges' -> 
+                if n = v then helper ls' edges' (l :: acc)
+                else 
+                  if n > v then helper ls' edges acc
+                  else helper ls edges' acc
+            | [], _ -> acc
+            | _, [] -> acc in
+        helper ls' edges' []
                                                 
 end
 

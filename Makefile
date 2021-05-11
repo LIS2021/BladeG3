@@ -13,10 +13,10 @@ run_blade: $(BLADE)
 	ocamlopt -o $@ $(BLADE)
 
 llpipe: $(LLSRC)
-	ocamlbuild -pkgs "llvm llvm.bitwriter" $@.native
+	ocamlbuild -pkgs "llvm" $@.native
 
 %.native: $(LLSRC)
-	ocamlbuild -pkgs "llvm llvm.bitwriter" $@
+	ocamlbuild -pkgs "llvm" $@
 
 llfuncs.bc: llfuncs.c
 	clang -emit-llvm -O0 -c -S $< -o $@
@@ -31,8 +31,8 @@ test%: test%.bc
 	clang -O0 $@.o -o $@
 	rm *.o
 
-cleantest%:
-	rm -f test$*.bc test$*
+cleantest:
+	rm -f test*.bc test*.ll test*
 
 clean:
 	rm -f test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test pipe run_blade *.trace *.out *.native *.ll *.bc ${OBJ}
