@@ -1,0 +1,12 @@
+#!/bin/bash
+
+start=`date +%s%N`
+lli "$1.bc"
+#./$1
+end=`date +%s%N`
+
+runtime=$( echo "($end - $start) / 1000" | bc )
+
+echo
+echo "time: $runtime usec"
+

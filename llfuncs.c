@@ -1,8 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/time.h>
-
-long long gstart = 0L;
+#include <time.h>
 
 void printmu(int* mu, int dim) {
   printf("|");
@@ -18,22 +16,16 @@ void printvar(int* name, int named, int val) {
   printf(" = %d\n", val);
 }
 
-/*
-void starttime() {
-  struct timeval start;
-  gettimeofday(&start, NULL);
-
-  gstart = (start.tv_sec * 1000000) + start.tv_usec;
+long starttime() {
+  return clock();
 }
 
-void endtime() {
-  struct timeval end;
-  gettimeofday(&end, NULL);
+void endtime(long start) {
+  clock_t end = clock();
 
-  printf("%lld\n", (end.tv_sec * 1000000) + end.tv_usec - gstart);
+  printf("time: %f\n\n", (double)(end - start) / CLOCKS_PER_SEC);
 
 }
-*/
 
 void fail() {
   printf("Something bad happened\n");

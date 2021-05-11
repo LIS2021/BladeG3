@@ -11,10 +11,8 @@ let i32_t = L.i32_type context;;
 let i64_t = L.i64_type context;;
 let fmain_t = L.function_type void_t [||];;
 let ffail_t = L.function_type void_t [| |];;
-(*
-let fstarttime_t = L.function_type void_t [||];;
-let fendtime_t = L.function_type void_t [||];;
-*)
+let fstarttime_t = L.function_type i64_t [||];;
+let fendtime_t = L.function_type void_t [| i64_t |];;
 
 let i32_const (i : int) = L.const_int i32_t i;;
 
@@ -23,10 +21,8 @@ let lmodule = L.create_module context "BLADEVM";;
 let fmain = L.define_function "main" fmain_t lmodule;;
 let fphony_fence = L.declare_function "phony_fence" fmain_t lmodule;;
 let ffail = L.declare_function "fail" ffail_t lmodule;;
-(*
 let fstarttime = L.declare_function "starttime" fstarttime_t lmodule;;
 let fendtime = L.declare_function "endtime" fendtime_t lmodule;;
-*)
 
 let print_mu (mu : L.llvalue) (dim : int) (builder : L.llbuilder) : L.llbuilder =
   let mu_t = L.type_of mu in
@@ -286,9 +282,9 @@ let build_ir (ast : cmd) (fancy : bool) : string llresult =
   let builder = L.builder_at_end context (L.entry_block fmain) in
   let rho, builder, mud = build_decl builder ast in
   let mu = build_mu mud builder in
-  (* let _ = L.build_call fstarttime [||] "" builder in *)
+  let vstart = L.build_call fstarttime [||] "vstart" builder in
   let* builder = build_cmd rho mu builder ast in
-  (* let _ = L.build_call fendtime [||] "" builder in *)
+  let _ = L.build_call fendtime [| vstart |] "" builder in
   let builder = print_mu mu mud builder in
   let builder = print_var rho builder in
   let _ = L.build_ret_void builder in
