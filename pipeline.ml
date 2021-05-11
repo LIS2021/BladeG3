@@ -13,6 +13,7 @@ let output_file = ref ""
 let trace_file = ref ""
 let enable_blade = ref false
 let verbose = ref false
+let vverbose = ref false
 let cost_model = ref ""
 let weight_model = ref ""
 let speculator = ref ""
@@ -23,6 +24,7 @@ let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("--speculator", Arg.Set_string speculator, "Select the virtual machine speculation model");
                  ("-s1.1", Arg.Set spectre, "Enable protection vs Spectre1.1");
                  ("-v", Arg.Set verbose, "Enable verbose output");
+                 ("-vv", Arg.Set vverbose, "Enable extra verbose output");
                  ("-t", Arg.Set_string trace_file, "Dumps the trace execution in a file");
                  ("-o", Arg.Set_string output_file, "Save the processed source code in a file")]
 
@@ -44,7 +46,7 @@ let () =
               with e -> close_out_noerr out_file));
           let conf = Evaluator.defaultConfiguration final_ast 100 in
           let spec = (match !speculator with
-            | "outoforder" -> Evaluator.outOfOrderSpeculator !verbose
+            | "outoforder" -> Evaluator.outOfOrderSpeculator !vverbose
             | "default"
             | _            -> Evaluator.defaultSpeculator Random.bool) in
           let cost = (match !cost_model with
@@ -62,7 +64,7 @@ let () =
           Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
           (match eval conf spec cost with
             | Ok (conf', obs, count) ->
-                if !verbose then
+                if !verbose || !vverbose then
                   Printf.printf "\n%s" (Evaluator.string_of_verbose (conf', obs, count))
                 else
                   Printf.printf "\ncount: %d\n" count
