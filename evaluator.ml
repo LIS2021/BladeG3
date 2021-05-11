@@ -91,6 +91,14 @@ let splitIs (ls : 'a list) (n : int) : ('a list * 'a * 'a list) vmresult =
           err InstructionOutOfRange
    in split_is_rec [] n ls;;
 
+let rec countMemIstruction (is: instruction list) : int =
+  match is with
+    | StoreE(_, _) : is' -> 
+    | StoreV(_, _) : is' ->  
+    | Load(_, _) : is' -> 1 + countMemIstruction is'
+    | _ : is' -> countMemIstruction is'
+    | _ -> 0
+
 let isStore (i : instruction) : bool =
   match i with
     | StoreE(_, _) -> true
@@ -386,6 +394,33 @@ module SimpleCost : CostModel = struct
       | Exec(n), {is; cs; mu; rho}  ->
           (match splitIs is n with
             | Ok (_, IProtectE(_, Fence, _), _) -> 5
+            | Ok (_, Load _, _) -> 10
+            | _ -> 1)
+      | Retire, {is = i :: _; cs; mu; rho} ->
+          (match i with
+            | Nop -> 0
+            | StoreV _ -> 10
+            | _ -> 1)
+      | _, _ -> 1
+end;;
+
+(** Simple implementation of the cost model
+    where the cost of the fence is determined by
+    the amount of instruction "blocked" by the fence **)
+module FenceSpeculativeCost : CostModel = struct
+  let n_proc = 1 in
+  let mem_ist_cost = 10 in
+  let cost dir conf =
+    match dir, conf with
+      | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
+      | Fetch, {is; cs = Protect (_, Fence, _) :: _; mu; rho} -> 
+        let c = countMemIstruction is in
+        let n = is.length - c in
+        c * mem_ist_cost - (n / n_proc)
+      | Fetch, _ -> 2
+      | PFetch(_), _ -> 1
+      | Exec(n), {is; cs; mu; rho}  ->
+          (match splitIs is n with
             | Ok (_, Load _, _) -> 10
             | _ -> 1)
       | Retire, {is = i :: _; cs; mu; rho} ->
