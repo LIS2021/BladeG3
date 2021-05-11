@@ -1,8 +1,14 @@
 #!/bin/bash
 
+lliexec=0
+if [[ $1 == "-bc" ]]; then lliexec=1; fi
+
 start=`date +%s%N`
-lli "$1.bc"
-#./$1
+if [[ lliexec -eq 1 ]]; then
+  lli "$2.bc"
+else
+  ./$1
+fi
 end=`date +%s%N`
 
 runtime=$( echo "($end - $start) / 1000" | bc )
