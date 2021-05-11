@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd ..
+from=$(pwd)
+cd docker
+
+sudo docker run -v "${from}":/home/bladeg3user/BladeG3 -it bladeg3 bash
