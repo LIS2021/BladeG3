@@ -415,7 +415,7 @@ module FenceSpeculativeCost : CostModel = struct
       | Fetch, {is; cs = Seq (_, _) :: _; mu; rho} -> 0
       | Fetch, {is; cs = Protect (_, Fence, _) :: _; mu; rho} -> 
         let c = countMemIstruction is in
-        let n = is.length - c in
+        let n = List.length is - c in
         c * mem_ist_cost - (n / n_proc)
       | Fetch, _ -> 2
       | PFetch(_), _ -> 1
