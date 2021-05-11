@@ -50,6 +50,7 @@ let () =
           let cost = (match !cost_model with
             | "fence"  -> (module Evaluator.FenceSensitiveCost : Evaluator.CostModel)
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
+            | "fence2" -> (module Evaluator.FenceSpeculativeCost : Evaluator.CostModel)
             | "uniform"
             | _        -> (module Evaluator.UniformCost : Evaluator.CostModel)) in
           let eval = (if !trace_file <> "" then
