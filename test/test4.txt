@@ -1,9 +1,9 @@
 x := 0;
 
-(while x < 1000 do
-  y := {0,1000}[x];
+(while x < 5 do
+  y := x + x;
   x := x + 1);
-z := y;
+z := {0,10}[y];
 
 if z then 
   skip; 

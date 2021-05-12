@@ -70,13 +70,13 @@ module type IBlade = sig
         returns the command updated with the correct type of protect
         if the command was an assignment to an identifier present in the list,
         the command unaltered otherwise **)
-    val protect_cmd : cmd -> identifier list -> cmd
+    val protect_cmd : cmd -> (identifier * rhs) list -> cmd
 
 end
 
 module Blade : IBlade = struct
 
-    let rec protect_cmd (c : cmd) (lprot : identifier list) : cmd =
+    let rec protect_cmd (c : cmd) (lprot : (identifier * rhs) list) : cmd =
         match c with
             | Skip -> Skip
             | Fail -> Fail
@@ -84,7 +84,7 @@ module Blade : IBlade = struct
                 let p = (match r with
                     | ArrayRead(_, _) -> Slh
                     | _ -> Fence) in
-                (match List.find_opt (fun s -> s = id) lprot with
+                (match List.find_opt (fun (x, r') -> x = id && r' = r) lprot with
                     | Some(_) -> Protect(id, p, r)
                     | None -> c)
             | PtrAssign(e1, e2, l) -> c
@@ -99,7 +99,7 @@ module Blade : IBlade = struct
         let gen = H.populate_graph c C.cost_f C.cost_r spectre in
         let g = H.get_graph gen in
         let pairs = H.get_pairs gen in
-        let (_, cut) = G.edmonds_karp g in
+        let (g', cut) = G.edmonds_karp g in
         let lprot = G.filter_assoc pairs cut in
         protect_cmd c lprot 
 

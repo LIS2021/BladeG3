@@ -1,0 +1,42 @@
+#!/bin/bash
+
+lliexec=0
+iter=0
+
+while [[ $# -gt 1 ]]; do
+  key="$1"
+
+  case $key in
+    -bc)
+      lliexec=1
+      shift;;
+    -avg)
+      iter=$2
+      shift
+      shift;;
+  esac
+
+done
+
+file=$1
+
+invoke=$(if [[ $lliexec -eq 1 ]]; then echo "lli $file.bc"; else echo "./$file"; fi)
+
+cmd() {
+  start=$(date +%s%N)
+  bash -c "$1"
+  end=$(date +%s%N)
+
+  runtime=$( echo "($end - $start) / 1000000" | bc )
+
+  echo
+  echo "time: $runtime msec"
+}
+
+if [[ iter -gt 0 ]]; then 
+  for i in $(seq 1 $iter); do 
+    cmd "$invoke" | tail -n1
+  done | awk '{sum += $2} END {print "\navg time of", NR, ":", sum/NR, "msec"}'
+else 
+  cmd "$invoke"
+fi

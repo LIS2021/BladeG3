@@ -1,0 +1,36 @@
+#!/bin/bash
+
+rm -f "test$1.lldump"
+make llpipe
+make run_blade.native
+
+echo
+echo "=== running test$1nb"
+echo "ast:" >> "test$1.lldump"
+echo >> "test$1.lldump"
+cat "test/test$1.txt" >> "test$1.lldump"
+./llpipe.native -o "test$1nb" "test/test$1.txt" &> /dev/null
+make "test$1nb" &> /dev/null
+./llrun -avg 100 "test$1nb" >> "test$1.lldump"
+echo "=== test$1nb ended"
+
+echo
+echo "=== running test$1bs"
+echo >> "test$1.lldump"
+echo >> "test$1.lldump"
+./run_blade.native --weights simple "test/test$1.txt" >> "test$1.lldump" 
+./llpipe.native --blade --weights simple -o "test$1bs" "test/test$1.txt" &> /dev/null
+make "test$1bs" &> /dev/null
+./llrun -avg 100 "test$1bs" >> "test$1.lldump"
+echo "=== test$1bs ended"
+
+echo
+echo "=== running test$1bf"
+echo >> "test$1.lldump"
+echo >> "test$1.lldump"
+./run_blade.native "test/test$1.txt" >> "test$1.lldump" 
+./llpipe.native --blade -o "test$1bf" "test/test$1.txt" &> /dev/null
+make "test$1bf" &> /dev/null
+./llrun -avg 10 "test$1bf" >> "test$1.lldump"
+echo "=== test$1bf ended"
+
