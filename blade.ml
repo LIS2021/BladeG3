@@ -57,6 +57,23 @@ module SimpleWeight : WeightModel = struct
 
 end
 
+(** Simple implementation where only commands
+    inside a while loop are penalized **)
+module PlainProtectWeight : WeightModel = struct
+
+    let cost_f (c : cmd) (oc : int) : int =
+      match c with
+        | VarAssign (_, rhs) -> oc
+        | _ -> -1
+
+    let cost_r (c : cmd) (oc : int) : int =
+      match c with
+        | While(_, _) -> oc + 10
+        | _ -> oc 
+
+end
+
+
 (** Module modeling the template 
     of the blade program **)
 module type IBlade = sig

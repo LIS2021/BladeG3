@@ -37,6 +37,7 @@ let () =
       | Some ast ->
           let weights = (match !weight_model with
             | "simple" -> (module Blade.SimpleWeight : Blade.WeightModel)
+            | "plainpr" -> (module Blade.PlainProtectWeight : Blade.WeightModel)
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights !spectre ast else ast in
