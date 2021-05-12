@@ -1,0 +1,17 @@
+iter := 1000;
+i := 0;
+y := 0;
+z := {0,10}[i];
+z2 := z;
+(while i < iter do
+  i := i + 1;
+  j := 0;
+  (while j < iter do
+    j := j + 1;
+    k := 0;
+    (while k < iter do
+      k := k + 1;
+      y := z2 + k;
+      w := y)));
+
+if w then skip else skip

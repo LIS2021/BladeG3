@@ -1,14 +1,15 @@
+iter := 100;
 i := 0;
 y := 0;
 z := {0,10}[i];
 z2 := z;
-(while i < 1000 do
+(while i < iter do
   i := i + 1;
   j := 0;
-  (while j < 1000 do
+  (while j < iter do
     j := j + 1;
     k := 0;
-    (while k < 1000 do
+    (while k < iter do
       k := k + 1;
       y := z2 + k;
       w := y)));
