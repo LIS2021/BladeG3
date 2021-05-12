@@ -1,18 +1,42 @@
 #!/bin/bash
 
 lliexec=0
-if [[ $1 == "-bc" ]]; then lliexec=1; fi
+iter=0
 
-start=`date +%s%N`
-if [[ lliexec -eq 1 ]]; then
-  lli "$2.bc"
-else
-  ./$1
+while [[ $# -gt 1 ]]; do
+  key="$1"
+
+  case $key in
+    -bc)
+      lliexec=1
+      shift;;
+    -avg)
+      iter=$2
+      shift
+      shift;;
+  esac
+
+done
+
+file=$1
+
+invoke=$(if [[ $lliexec -eq 1 ]]; then echo "lli $file.bc"; else echo "./$file"; fi)
+
+cmd() {
+  start=$(date +%s%N)
+  bash -c "$1"
+  end=$(date +%s%N)
+
+  runtime=$( echo "($end - $start) / 1000" | bc )
+
+  echo
+  echo "time: $runtime usec"
+}
+
+if [[ iter -gt 0 ]]; then 
+  for i in $(seq 1 $iter); do 
+    cmd "$invoke" | tail -n1
+  done | awk '{sum += $2} END {print "avg time of", NR, ":", sum/NR, "usec"}'
+else 
+  cmd "$invoke"
 fi
-end=`date +%s%N`
-
-runtime=$( echo "($end - $start) / 1000" | bc )
-
-echo
-echo "time: $runtime usec"
-
