@@ -27,16 +27,16 @@ cmd() {
   bash -c "$1"
   end=$(date +%s%N)
 
-  runtime=$( echo "($end - $start) / 1000" | bc )
+  runtime=$( echo "($end - $start) / 1000000" | bc )
 
   echo
-  echo "time: $runtime usec"
+  echo "time: $runtime msec"
 }
 
 if [[ iter -gt 0 ]]; then 
   for i in $(seq 1 $iter); do 
     cmd "$invoke" | tail -n1
-  done | awk '{sum += $2} END {print "avg time of", NR, ":", sum/NR, "usec"}'
+  done | awk '{sum += $2} END {print "\navg time of", NR, ":", sum/NR, "msec"}'
 else 
   cmd "$invoke"
 fi

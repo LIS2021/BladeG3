@@ -2,7 +2,7 @@ SRC=opal.ml ast.ml parser.ml graph.ml evaluator.ml def_use_gen.ml blade.ml utils
 LLSRC=$(SRC) lleval.ml llpipe.ml
 BLADE=opal.ml ast.ml parser.ml graph.ml def_use_gen.ml blade.ml run_blade.ml
 TEST_SRC=test/test_gen.ml test/test_graph.ml test/test0.ml test/test1.ml
-OBJ=test1 test2 test3 test4
+OBJ=test1 test2 test3 test4 test5 test6 test7 test8 test9
 
 all: pipe run_blade
 
@@ -32,9 +32,9 @@ test%: test%.bc
 	rm *.o
 
 cleantest:
-	rm -f test*.bc test*.ll test*
+	rm -f test*.bc test*.ll ${OBJ} test*nb test*bs test*bf test*v
 
 clean:
-	rm -f test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test pipe run_blade *.trace *.out *.native *.ll *.bc ${OBJ}
+	rm -f test/*.cmi test/*.cmx test/*.o *.cmi *.cmx *.o *.test pipe run_blade *.trace *.out *.native *.ll *.bc ${OBJ} test*nb test*bf test*bs test*v
 	rm -rf _build
 

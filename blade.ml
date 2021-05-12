@@ -98,11 +98,8 @@ module Blade : IBlade = struct
         let module C = (val model : WeightModel) in
         let gen = H.populate_graph c C.cost_f C.cost_r spectre in
         let g = H.get_graph gen in
-        G.print_graph g;
         let pairs = H.get_pairs gen in
         let (g', cut) = G.edmonds_karp g in
-        Printf.printf "\n";
-        G.print_graph g';
         let lprot = G.filter_assoc pairs cut in
         protect_cmd c lprot 
 

@@ -280,18 +280,16 @@ let build_mu (dim : int) (builder : L.llbuilder) : L.llvalue =
   List.iteri (store_zero mu) ls_of_zero;
   mu
 
-let build_ir (ast : cmd) (ifence : bool) : string llresult =
+let build_ir (verbose : bool) (ifence : bool) (ast : cmd) : string llresult =
   let fence_injector =
     { phony = "call void @phony_fence()";
       repl = "fence seq_cst"; } in
   let builder = L.builder_at_end context (L.entry_block fmain) in
   let rho, builder, mud = build_decl builder ast in
   let mu = build_mu mud builder in
-  (* let vstart = L.build_call fstarttime [||] "vstart" builder in *)
   let* builder = build_cmd rho mu builder ast in
-  (* let _ = L.build_call fendtime [| vstart |] "" builder in *)
-  let builder = print_mu mu mud builder in
-  let builder = print_var rho builder in
+  let builder = (if verbose then print_mu mu mud builder else builder) in
+  let builder = (if verbose then print_var rho builder else builder) in
   let _ = L.build_ret_void builder in
   let ir = L.string_of_llmodule lmodule in
   pure(if ifence then inject_fence ir fence_injector else ir);;

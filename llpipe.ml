@@ -6,11 +6,13 @@ let enable_blade = ref false;;
 let output_file = ref "";; 
 let spectre = ref false;;
 let noifence = ref false;;
+let verbose = ref false;;
 let weight_model = ref "";;
 let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("-s1.1", Arg.Set spectre, "Enable protection vs Spectre1.1");
                  ("--noifence", Arg.Set noifence, "Disable fence injection");
                  ("--weights", Arg.Set_string weight_model, "Select weights model for blade");
+                 ("-v", Arg.Set verbose, "Enable verbose mode");
                  ("-o", Arg.Set_string output_file, "Save the processed ll code in a file")];;
 
 let () =
@@ -24,7 +26,7 @@ let () =
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights !spectre ast else ast in
-          (match Lleval.build_ir final_ast (not !noifence) with
+          (match Lleval.build_ir !verbose (not !noifence) final_ast with
             | Ok ir -> 
                 Printf.printf "%s\n" ir;
                 if !output_file <> "" then 
