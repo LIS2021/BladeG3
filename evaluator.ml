@@ -24,7 +24,7 @@ let string_of_verbose ((conf : configuration), (obs : observation list), (count 
   "mu: [ " ^ (Array.fold_left (fun it v -> Printf.sprintf "%s%d; " it v) "" conf.mu) ^ "]\n\n" ^
   "rho: { " ^ (StringMap.fold (fun k v it -> Printf.sprintf "%s%s: %s; " it k (string_of_value v)) conf.rho "") ^ "}\n\n" ^
   "obs:\n[ " ^ (List.fold_left (fun it o -> Printf.sprintf "%s%s; " it (string_of_observation o)) "" obs) ^ "]\n\n" ^
-  "count: " ^ (string_of_int count) ^ "\n\n";;
+  "count: " ^ (string_of_int count) ^ "\n";;
 
 (** Module modeling the template of a cost model **)
 module type CostModel = sig
