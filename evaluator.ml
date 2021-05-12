@@ -504,3 +504,23 @@ end;;
 
 let defaultConfiguration (c : cmd) (size : int) : configuration =
     {is = []; cs = [c]; mu = Array.make size 0; rho = StringMap.empty};;
+
+let dynamic_mu_configuration (c : cmd) : configuration =
+  let rec max_mu (dim : int) (c : cmd) : int =
+    match c with 
+      | VarAssign(id, r)
+      | Protect(id, _, r) -> 
+          let dim' = (match r with
+            | ArrayRead(a, e) -> a.length + a.base
+            | _ -> dim) in
+          (if dim' > dim then dim' else dim)
+      | ArrAssign(a, _, _) -> 
+          let dim' = a.length + a.base in
+          (if dim' > dim then dim' else dim)
+      | Seq(c1, c2)
+      | If(_, c1, c2) ->
+          let dim' = max_mu dim c1 in
+          max_mu dim' c2
+      | While(_, c1) -> max_mu dim c1
+      | _ -> dim in
+  {is = []; cs = [c]; mu = Array.make (max_mu 0 c) 0; rho = StringMap.empty};;

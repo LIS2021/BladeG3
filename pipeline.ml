@@ -45,7 +45,7 @@ let () =
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);
               with e -> close_out_noerr out_file));
-          let conf = Evaluator.defaultConfiguration final_ast 100 in
+          let conf = Evaluator.dynamic_mu_configuration final_ast in
           let spec = (match !speculator with
             | "outoforder" -> Evaluator.outOfOrderSpeculator !vverbose
             | "default"

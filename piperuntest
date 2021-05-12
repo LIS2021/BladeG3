@@ -1,0 +1,51 @@
+#!/bin/bash
+
+weigth=simple
+while [[ $# -gt 1 ]]; do
+  key="$1"
+
+  case $key in
+    -w)
+      weight=$2
+      shift
+      shift;;
+  esac
+
+done
+
+ntest=$1
+
+rm -f "test${ntest}.lldump"
+make llpipe
+make run_blade.native
+
+echo
+echo "=== running test${ntest}nb"
+echo "ast:" >> "test${ntest}.lldump"
+echo >> "test${ntest}.lldump"
+cat "test/test${ntest}.txt" >> "test${ntest}.lldump"
+./llpipe.native -o "test${ntest}nb" "test/test${ntest}.txt" &> /dev/null
+make "test${ntest}nb" &> /dev/null
+./llrun -avg 100 "test${ntest}nb" >> "test${ntest}.lldump"
+echo "=== test${ntest}nb ended"
+
+echo
+echo "=== running test${ntest}bs"
+echo >> "test${ntest}.lldump"
+echo >> "test${ntest}.lldump"
+./run_blade.native --weights ${weight} "test/test${ntest}.txt" >> "test${ntest}.lldump" 
+./llpipe.native --blade --weights ${weight} -o "test${ntest}bs" "test/test${ntest}.txt" &> /dev/null
+make "test${ntest}bs" &> /dev/null
+./llrun -avg 100 "test${ntest}bs" >> "test${ntest}.lldump"
+echo "=== test${ntest}bs ended"
+
+echo
+echo "=== running test${ntest}bf"
+echo >> "test${ntest}.lldump"
+echo >> "test${ntest}.lldump"
+./run_blade.native "test/test${ntest}.txt" >> "test${ntest}.lldump" 
+./llpipe.native --blade -o "test${ntest}bf" "test/test${ntest}.txt" &> /dev/null
+make "test${ntest}bf" &> /dev/null
+./llrun -avg 10 "test${ntest}bf" >> "test${ntest}.lldump"
+echo "=== test${ntest}bf ended"
+
