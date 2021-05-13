@@ -1,23 +1,26 @@
 (** Program modeling the pipeline performed by the execution of virtual evaluator, usage:
-    pipeline [--blade] [--model] [--weights] [-v] [-t] [-o] [out.txt] <input.txt>
+  pipeline [--blade] [--model] [--weights] [-v] [-vv] [-s1.1] [-t] [-o] [out.txt] <input.txt>
     [--blade]       : using this flag enforce the use of blade
     [--model]       : choose the model of cost for the instructions between "simple", "fence" or "uniform"
     [--weights]     : choose the model of weights between "simple" or "constant"
+    [--speculator]  : choose the speculator behaviour between "default" or "outoforder"
+    [-s1.1]         : enable protection for Spectre1.1
     [-v]            : using this flag enables verbose output
+    [-vv]           : using this flag enables extra verbose output
     [-t] [out.txt]  : using this flag dumps the trace execution in the given file
     [-o] [out.txt]  : using this flag dumps the result in the given file
 **)
-let usage_msg = "pipe [OPTIONS] <file>"
-let input_file = ref ""
-let output_file = ref ""
-let trace_file = ref ""
-let enable_blade = ref false
-let verbose = ref false
+let usage_msg = "pipe [OPTIONS] <file>";;
+let input_file = ref "";;
+let output_file = ref "";;
+let trace_file = ref "";;
+let enable_blade = ref false;;
+let verbose = ref false;;
 let vverbose = ref false
-let cost_model = ref ""
-let weight_model = ref ""
-let speculator = ref ""
-let spectre = ref false
+let cost_model = ref "";;
+let weight_model = ref "";;
+let speculator = ref "";;
+let spectre = ref false;;
 let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("--model", Arg.Set_string cost_model, "Select cost model for evaluation");
                  ("--weights", Arg.Set_string weight_model, "Select weights model for blade");
@@ -26,7 +29,7 @@ let spec_list = [("--blade", Arg.Set enable_blade, "Enable blade optimization");
                  ("-v", Arg.Set verbose, "Enable verbose output");
                  ("-vv", Arg.Set vverbose, "Enable extra verbose output");
                  ("-t", Arg.Set_string trace_file, "Dumps the trace execution in a file");
-                 ("-o", Arg.Set_string output_file, "Save the processed source code in a file")]
+                 ("-o", Arg.Set_string output_file, "Save the processed source code in a file")];;
 
 let () =
   Random.self_init ();
@@ -47,9 +50,9 @@ let () =
               with e -> close_out_noerr out_file));
           let conf = Evaluator.dynamic_mu_configuration final_ast in
           let spec = (match !speculator with
-            | "outoforder" -> Evaluator.outOfOrderSpeculator !vverbose
+            | "outoforder" -> Evaluator.out_of_order_speculator !vverbose
             | "default"
-            | _            -> Evaluator.defaultSpeculator Random.bool) in
+            | _            -> Evaluator.default_speculator Random.bool) in
           let cost = (match !cost_model with
             | "fence"  -> (module Evaluator.FenceSensitiveCost : Evaluator.CostModel)
             | "simple" -> (module Evaluator.SimpleCost : Evaluator.CostModel)
@@ -59,7 +62,7 @@ let () =
           let eval = (if !trace_file <> "" then
             (fun conf spec cost ->
               let out_tr = (open_out (!trace_file ^ ".trace")) in
-              (try Evaluator.evalWithTrace out_tr conf spec cost
+              (try Evaluator.eval_with_trace out_tr conf spec cost
               with e -> close_out_noerr out_tr; Evaluator.err Evaluator.EndOfStream))
             else Evaluator.eval) in
           Printf.printf "ast:\n\n%s\n" (Ast.string_of_cmd final_ast);
@@ -73,4 +76,4 @@ let () =
       | None -> failwith "cannot parse input file"
   with e ->
     close_in_noerr in_file;
-    raise e
+    raise e;;

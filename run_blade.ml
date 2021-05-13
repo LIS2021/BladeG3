@@ -1,7 +1,7 @@
 (** Program modeling the execution of Blade, usage:
     ./run_blade [--weights] [-o] [out.txt] <input.txt>
     [--weights]     : choose the model of weights between "simple" or "constant"
-    [-o] [out.txt]  : using this flag dumps the result in the given file 
+    [-o] [out.txt]  : using this flag dumps the result in the given file
 **)
 let usage_msg = "pipe [--blade] <file>"
 let input_file = ref ""
@@ -24,7 +24,7 @@ let () =
             | "constant"
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = Blade.Blade.blade weights !spectre ast in
-          if !output_file <> "" then 
+          if !output_file <> "" then
               (let out_file = open_out (!output_file ^ ".out") in
               (try output_string out_file (Ast.string_of_cmd final_ast);
               with e -> close_out_noerr out_file));
@@ -32,4 +32,4 @@ let () =
       | None -> failwith "cannot parse input file"
   with e ->
     close_in_noerr in_file;
-    raise e
+    raise e;;

@@ -10,7 +10,7 @@ let void_t = L.void_type context;;
 let i32_t = L.i32_type context;;
 let i64_t = L.i64_type context;;
 let fmain_t = L.function_type void_t [||];;
-let ffail_t = L.function_type void_t [| |];;
+let ffail_t = L.function_type void_t [||];;
 (*
 let fstarttime_t = L.function_type i64_t [||];;
 let fendtime_t = L.function_type void_t [| i64_t |];;
@@ -51,7 +51,7 @@ let print_var (rho : L.llvalue VarMap.t) (builder : L.llbuilder) : L.llbuilder =
     let var = L.build_load lval id builder in
     L.build_call fprintvar [| idarr; (i32_const (String.length id)); var |] "" builder |> ignore in
   VarMap.iter var_iterator rho;
-  builder;; 
+  builder;;
 
 type injector = {
     phony : string ;
@@ -69,10 +69,10 @@ let inject_fence (ir : string) (inj : injector) : string =
           else [List.hd prev], (List.tl prev) @ irl
       | _, [] -> repll, irl
       | [], p :: _ -> prev, [] in
-  let rec helper (irl : char list) (phonyl : char list) : char list = 
+  let rec helper (irl : char list) (phonyl : char list) : char list =
     match irl, phonyl with
-      | i :: irl', p :: phonyl' -> 
-          if i = p then 
+      | i :: irl', p :: phonyl' ->
+          if i = p then
             let prev, cont = check_match irl' phonyl' [i] in
             prev @ (helper cont phonyl)
           else i :: helper irl' phonyl
@@ -80,7 +80,7 @@ let inject_fence (ir : string) (inj : injector) : string =
       | i :: irl', [] -> irl in
   helper irl phonyl |> List.to_seq |> String.of_seq;;
 
-type llerror = 
+type llerror =
   | InvalidType of string
   | UndefinedVariable of string;;
 
@@ -100,16 +100,16 @@ let check_declared_var (rho : L.llvalue VarMap.t) (id : string) : L.llvalue llre
     | Some(lval) -> pure lval
     | _ -> err(UndefinedVariable id);;
 
-let check_array (e : expr) : arr llresult = 
+let check_array (e : expr) : arr llresult =
   match e with
     | Cst(CstA(a)) -> pure a
     | _ -> err(InvalidType "array");;
 
 
-let rec build_expr (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (e : expr) : (L.llvalue * L.llbuilder) llresult = 
+let rec build_expr (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (e : expr) : (L.llvalue * L.llbuilder) llresult =
   match e with
     | Cst(CstI(i)) -> pure(i32_const i, builder)
-    | Var(x) -> 
+    | Var(x) ->
         let* lval = check_declared_var rho x in
         pure(L.build_load lval x builder, builder)
     | BinOp(e1, e2, op) ->
@@ -118,10 +118,10 @@ let rec build_expr (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbu
         let lval = (match op with
           | Add -> L.build_add ve1 ve2 "add" builder
           | BitAnd -> L.build_and ve1 ve2 "bitand" builder
-          | Lte -> 
+          | Lte ->
               let bv = L.build_icmp L.Icmp.Sle ve1 ve2 "le" builder in
               L.build_zext bv i32_t "ext" builder
-          | Lt -> 
+          | Lt ->
               let bv = L.build_icmp L.Icmp.Slt ve1 ve2 "lt" builder in
               L.build_zext bv i32_t "ext" builder) in
         pure(lval, builder)
@@ -134,16 +134,16 @@ let rec build_expr (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbu
         let tbr = L.build_and ve2 bit1 "and" builder in
         let fbr = L.build_and ve3 nbit1 "and" builder in
         pure(L.build_add tbr fbr "add" builder, builder)
-    | Base(e) -> 
+    | Base(e) ->
         let* a = check_array e in
         pure(i32_const a.base, builder)
-    | Length(e) -> 
+    | Length(e) ->
         let* a = check_array e in
         pure(i32_const a.length, builder)
     | _ -> failwith "syntax error";;
 
 
-let build_rhs (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) : (L.llvalue * L.llbuilder) llresult = 
+let build_rhs (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder) (r : rhs) : (L.llvalue * L.llbuilder) llresult =
   match r with
     | Expr(e) -> build_expr rho mu builder e
     | PtrRead(e, _) ->
@@ -151,7 +151,7 @@ let build_rhs (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder
         let ptr = L.build_gep mu [| ve |] "eptr" builder in
         let vptr = L.build_load ptr "ve" builder in
         pure(vptr, builder)
-    | ArrayRead(a, e1) -> 
+    | ArrayRead(a, e1) ->
         let bthen = L.append_block context "then" fmain in
         let belse = L.append_block context "else" fmain in
         let bcont = L.append_block context "cont" fmain in
@@ -163,7 +163,7 @@ let build_rhs (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbuilder
         let builder_then = L.builder_at_end context bthen in
         let ve' = L.build_add (i32_const a.base) ve1 "vep" builder_then in
         let ptr = L.build_gep mu [| ve' |] "epptr" builder_then in
-        let vrt = L.build_load ptr "vrt" builder_then in 
+        let vrt = L.build_load ptr "vrt" builder_then in
         let _ = L.build_br bcont builder_then in
         (* else *)
         let builder_else = L.builder_at_end context belse in
@@ -184,7 +184,7 @@ let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbui
         let* lval' = check_declared_var rho id in
         let _ = L.build_store vrhs lval' builder in
         pure(builder)
-    | PtrAssign(e1, e2, _) -> 
+    | PtrAssign(e1, e2, _) ->
         let* ve1, builder = build_expr rho mu builder e1 in
         let* ve2, builder = build_expr rho mu builder e2 in
         let ptr = L.build_gep mu [| ve1 |] "eptr" builder in
@@ -239,7 +239,7 @@ let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbui
         let _ = L.build_store vmasked lval' builder in
         Printf.printf "slh\n";
         pure(builder)
-    | Protect(id, _, rhs) -> 
+    | Protect(id, _, rhs) ->
         let* vrhs, builder = build_rhs rho mu builder rhs in
         let _ = L.build_call fphony_fence [||] "" builder in
         let* lval' = check_declared_var rho id in
@@ -248,9 +248,9 @@ let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbui
 
 let build_decl (builder : L.llbuilder) (c : cmd) : (L.llvalue VarMap.t * L.llbuilder * int) =
   let rec helper (rho : L.llvalue VarMap.t) (mud : int) (builder : L.llbuilder) (c : cmd) : (L.llvalue VarMap.t * L.llbuilder * int) =
-    match c with 
+    match c with
       | VarAssign(id, r)
-      | Protect(id, _, r) -> 
+      | Protect(id, _, r) ->
           let rho', builder' = (match VarMap.find_opt id rho with
             | Some(_) -> rho, builder
             | None ->
@@ -260,7 +260,7 @@ let build_decl (builder : L.llbuilder) (c : cmd) : (L.llvalue VarMap.t * L.llbui
             | ArrayRead(a, e) -> a.length + a.base
             | _ -> mud) in
           rho', builder', (if mud' > mud then mud' else mud)
-      | ArrAssign(a, _, _) -> 
+      | ArrAssign(a, _, _) ->
           let mud' = a.length + a.base in
           rho, builder, (if mud' > mud then mud' else mud)
       | Seq(c1, c2)
@@ -293,4 +293,3 @@ let build_ir (verbose : bool) (ifence : bool) (ast : cmd) : string llresult =
   let _ = L.build_ret_void builder in
   let ir = L.string_of_llmodule lmodule in
   pure(if ifence then inject_fence ir fence_injector else ir);;
- 
