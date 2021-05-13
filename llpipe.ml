@@ -3,7 +3,7 @@ module L = Llvm;;
 let usage_msg = "llvm_eval.native <file>";;
 let input_file = ref "";;
 let enable_blade = ref false;;
-let output_file = ref "";; 
+let output_file = ref "";;
 let spectre = ref false;;
 let noifence = ref false;;
 let verbose = ref false;;
@@ -28,9 +28,9 @@ let () =
             | _        -> (module Blade.ConstantWeight : Blade.WeightModel)) in
           let final_ast = if !enable_blade then Blade.Blade.blade weights !spectre ast else ast in
           (match Lleval.build_ir !verbose (not !noifence) final_ast with
-            | Ok ir -> 
+            | Ok ir ->
                 Printf.printf "%s\n" ir;
-                if !output_file <> "" then 
+                if !output_file <> "" then
                   (let out_file = open_out (!output_file ^ ".ll") in
                   (try output_string out_file (ir);
                   with e -> close_out_noerr out_file));
@@ -39,5 +39,4 @@ let () =
       | None -> failwith "Cannot parse input file"
   with e ->
     close_in_noerr in_file;
-    raise e   
-
+    raise e;;

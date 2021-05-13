@@ -20,11 +20,11 @@ The virtual machine can be run through the `pipe` executable, by calling
 
         ./pipe [OPTIONS] <file>
 
-Blade is included in the executable and can be activated in the options.  
+Blade is included in the executable and can be activated in the options.
 `<file>` must contain the input code to be executed (and possibly protected with blade).
 
 The execution of only Blade can be done through the `run_blade` executable:
-        
+
         ./run_blade [OPTIONS] <file>
 
 `<file>` must contain the input code to run Blade on.
@@ -34,21 +34,31 @@ The execution of only Blade can be done through the `run_blade` executable:
 The available options for the `pipe` executable are the following:
 
         OPTIONS:
-            
-            --blade:                     Enable blade optimization
-            --model [uniform|simple]:    Select cost model for evaluation
-            --weights [constant|simple]: Select weights model for blade
-            -s1.1:                       Enable protection vs Spectre1.1
-            -v:                          Enable verbose output
-            -t <file>:                   Dumps the trace execution in <file>.trace
-            -o <file>:                   Save the processed source code in <file>.out
+
+            --blade:                           Enable blade optimization
+            --model [uniform|simple]:          Select cost model for evaluation
+            --weights [constant|simple]:       Select weights model for blade
+            --speculator [default|outoforder]: Select the speculator behaviour for the vm
+            -s1.1:                             Enable protection vs Spectre1.1
+            -v:                                Enable verbose output
+            -vv:                               Enable extra verbose output
+            -t <file>:                         Dumps the trace execution in <file>.trace
+            -o <file>:                         Save the processed source code in <file>.out
 
 The available options for the `run_blade` executable are the following:
 
         OPTIONS:
-            
+
             --weights [constant|simple]: Select weights model for blade
             -s1.1:                       Enable protection vs Spectre1.1
             -o <file>:                   Save the processed source code in <file>.out
 
+## Docker
 
+A docker image for testing on unix system is available in the `docker` subdirectory.
+To obtain a docker environment run:
+
+```
+sh instal.sh
+sh rundocker
+```
