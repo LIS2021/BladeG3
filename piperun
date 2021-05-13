@@ -29,5 +29,5 @@ if [[ iter -gt 0 ]]; then
     bash -c "$cmd$file" | tail -n1
   done | awk '{sum += $2} END {print "avg of", NR, ":", sum/NR}'
 else 
-  bash -c "$cmd$file"
+  bash -c "$cmd$file" | tail -n1
 fi

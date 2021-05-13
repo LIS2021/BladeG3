@@ -127,7 +127,7 @@ let rec build_expr (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbu
         pure(lval, builder)
     | InlineIf(e1, e2, e3) ->
         let* ve1, builder = build_expr rho mu builder e1 in
-        let nbit1 = L.build_add (i32_const (-1)) ve1 "add" builder in              (* ???????? *)
+        let nbit1 = L.build_add (i32_const (-1)) ve1 "add" builder in
         let bit1 = L.build_xor nbit1 (i32_const (-1)) "xor" builder in
         let* ve2, builder = build_expr rho mu builder e2 in
         let* ve3, builder = build_expr rho mu builder e3 in
@@ -230,7 +230,7 @@ let rec build_cmd (rho : L.llvalue VarMap.t) (mu : L.llvalue) (builder : L.llbui
         let be1 = L.build_icmp L.Icmp.Slt ve (i32_const a.length) "be1" builder in
         let nbe1 = L.build_not be1 "nbe1" builder in
         let ve1 = L.build_zext nbe1 i32_t "ve1" builder in
-        let vr = L.build_add (i32_const (-1)) ve1 "r" builder in                (* ?????????? *)
+        let vr = L.build_add (i32_const (-1)) ve1 "r" builder in
         let ve2 = L.build_add (i32_const a.base) ve "ve2" builder in
         let masked = L.build_and vr ve2 "masked" builder in
         let* lval' = check_declared_var rho id in

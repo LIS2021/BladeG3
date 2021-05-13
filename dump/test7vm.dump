@@ -1,0 +1,99 @@
+ast:
+
+iter := 100;
+i := 0;
+y := 0;
+z := {0,10}[i];
+z2 := z;
+(while i < iter do
+  i := i + 1;
+  j := 0;
+  (while j < iter do
+    j := j + 1;
+    k := 0;
+    (while k < iter do
+      k := k + 1;
+      y := z2 + k;
+      w := y)));
+
+if w then skip else skip
+
+default speculator:
+uniform: count: 13151528
+fence: count: 13151528
+fence2: count: 16181843
+simple: count: 16181843
+
+out of order speculator:
+uniform: avg of 20 : 1.36807e+07
+fence: avg of 20 : 1.36806e+07
+fence2: avg of 20 : 1.71296e+07
+simple: avg of 20 : 1.71292e+07
+
+ast:
+
+iter := 100;
+i := 0;
+y := 0;
+z := {0,10}[i];
+z2 := z;
+(while i < iter do
+  i := i + 1;
+  j := 0;
+  (while j < iter do
+    j := j + 1;
+    k := 0;
+    (while k < iter do
+      k := k + 1;
+      y := z2 + k;
+      w := protect_fence(y))));
+(if w then
+  skip
+else
+  skip)
+
+default speculator:
+uniform: count: 14151528
+fence: count: 18151528
+fence2: count: 15181843
+simple: count: 21181843
+
+out of order speculator:
+uniform: avg of 20 : 1.46807e+07
+fence: avg of 20 : 1.86809e+07
+fence2: avg of 20 : 1.61292e+07
+simple: avg of 20 : 2.21297e+07
+
+ast:
+
+iter := 100;
+i := 0;
+y := 0;
+z := {0,10}[i];
+z2 := protect_fence(z);
+(while i < iter do
+  i := i + 1;
+  j := 0;
+  (while j < iter do
+    j := j + 1;
+    k := 0;
+    (while k < iter do
+      k := k + 1;
+      y := z2 + k;
+      w := y)));
+(if w then
+  skip
+else
+  skip)
+
+default speculator:
+uniform: count: 13151529
+fence: count: 13151533
+fence2: count: 16181842
+simple: count: 16181848
+
+out of order speculator:
+uniform: avg of 20 : 1.36804e+07
+fence: avg of 20 : 1.36806e+07
+fence2: avg of 20 : 1.71295e+07
+simple: avg of 20 : 1.71295e+07

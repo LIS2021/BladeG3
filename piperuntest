@@ -1,6 +1,6 @@
 #!/bin/bash
 
-weigth=simple
+weight=simple
 while [[ $# -gt 1 ]]; do
   key="$1"
 
@@ -14,38 +14,60 @@ while [[ $# -gt 1 ]]; do
 done
 
 ntest=$1
-
-rm -f "test${ntest}.lldump"
-make llpipe
-make run_blade.native
+iters=20
+dump="dump/test${ntest}.dump"
+: '
+rm -f "${dump}"
+make pipe
+make run_blade
 
 echo
 echo "=== running test${ntest}nb"
-echo "ast:" >> "test${ntest}.lldump"
-echo >> "test${ntest}.lldump"
-cat "test/test${ntest}.txt" >> "test${ntest}.lldump"
-./llpipe.native -o "test${ntest}nb" "test/test${ntest}.txt" &> /dev/null
-make "test${ntest}nb" &> /dev/null
-./llrun -avg 100 "test${ntest}nb" >> "test${ntest}.lldump"
+echo "ast:" >> "${dump}"
+echo >> "${dump}"
+cat "test/test${ntest}.txt" >> "${dump}"
+printf "\ndefault speculator:\n" >> "${dump}"
+printf "uniform: " >> "${dump}"; ./piperun --model uniform "test/test${ntest}.txt" >> "${dump}"
+printf "fence: " >> "${dump}"; ./piperun --model fence "test/test${ntest}.txt" >> "${dump}"
+printf "fence2: " >> "${dump}"; ./piperun --model fence2 "test/test${ntest}.txt" >> "${dump}"
+printf "simple: " >> "${dump}"; ./piperun --model simple "test/test${ntest}.txt" >> "${dump}"
+printf "\nout of order speculator:\n" >> "${dump}"
+printf "uniform: " >> "${dump}"; ./piperun --model uniform --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "fence: " >> "${dump}"; ./piperun --model fence --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "fence2: " >> "${dump}"; ./piperun --model fence2 --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "simple: " >> "${dump}"; ./piperun --model simple --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
 echo "=== test${ntest}nb ended"
 
 echo
-echo "=== running test${ntest}bs"
-echo >> "test${ntest}.lldump"
-echo >> "test${ntest}.lldump"
-./run_blade.native --weights ${weight} "test/test${ntest}.txt" >> "test${ntest}.lldump" 
-./llpipe.native --blade --weights ${weight} -o "test${ntest}bs" "test/test${ntest}.txt" &> /dev/null
-make "test${ntest}bs" &> /dev/null
-./llrun -avg 100 "test${ntest}bs" >> "test${ntest}.lldump"
-echo "=== test${ntest}bs ended"
-
+echo "=== running test${ntest}b1"
+echo >> "${dump}"
+./run_blade "test/test${ntest}.txt" >> "${dump}"
+printf "\ndefault speculator:\n" >> "${dump}"
+printf "uniform: " >> "${dump}"; ./piperun --blade --model uniform "test/test${ntest}.txt" >> "${dump}"
+printf "fence: " >> "${dump}"; ./piperun --blade --model fence "test/test${ntest}.txt" >> "${dump}"
+printf "fence2: " >> "${dump}"; ./piperun --blade --model fence2 "test/test${ntest}.txt" >> "${dump}"
+printf "simple: " >> "${dump}"; ./piperun --blade --model simple "test/test${ntest}.txt" >> "${dump}"
+printf "\nout of order speculator:\n" >> "${dump}"
+printf "uniform: " >> "${dump}"; ./piperun --blade --model uniform --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "fence: " >> "${dump}"; ./piperun --blade --model fence --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "fence2: " >> "${dump}"; ./piperun --blade --model fence2 --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "simple: " >> "${dump}"; ./piperun --blade --model simple --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+echo "=== test${ntest}b1 ended"
+'
 echo
-echo "=== running test${ntest}bf"
-echo >> "test${ntest}.lldump"
-echo >> "test${ntest}.lldump"
-./run_blade.native "test/test${ntest}.txt" >> "test${ntest}.lldump" 
-./llpipe.native --blade -o "test${ntest}bf" "test/test${ntest}.txt" &> /dev/null
-make "test${ntest}bf" &> /dev/null
-./llrun -avg 10 "test${ntest}bf" >> "test${ntest}.lldump"
-echo "=== test${ntest}bf ended"
+echo "=== running test${ntest}b2"
+echo >> "${dump}"
+./run_blade --weights ${weight} "test/test${ntest}.txt" >> "${dump}"
+printf "\ndefault speculator:\n" >> "${dump}"
+printf "uniform: " >> "${dump}"; ./piperun --blade --weights ${weight} --model uniform "test/test${ntest}.txt" >> "${dump}"
+printf "fence: " >> "${dump}"; ./piperun --blade --weights ${weight} --model fence "test/test${ntest}.txt" >> "${dump}"
+printf "fence2: " >> "${dump}"; ./piperun --blade --weights ${weight} --model fence2 "test/test${ntest}.txt" >> "${dump}"
+printf "simple: " >> "${dump}"; ./piperun --blade --weights ${weight} --model simple "test/test${ntest}.txt" >> "${dump}"
+printf "\nout of order speculator:\n" >> "${dump}"
+printf "uniform: " >> "${dump}"; ./piperun --blade --weights ${weight} --model uniform --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "fence: " >> "${dump}"; ./piperun --blade --weights ${weight} --model fence --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "fence2: " >> "${dump}"; ./piperun --blade --weights ${weight} --model fence2 --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+printf "simple: " >> "${dump}"; ./piperun --blade --weights ${weight} --model simple --speculator outoforder -avg ${iters} "test/test${ntest}.txt" >> "${dump}"
+echo "=== test${ntest}b2 ended"
+
 

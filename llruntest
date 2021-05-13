@@ -1,6 +1,6 @@
 #!/bin/bash
 
-weigth=simple
+weight=simple
 while [[ $# -gt 1 ]]; do
   key="$1"
 
@@ -14,38 +14,39 @@ while [[ $# -gt 1 ]]; do
 done
 
 ntest=$1
+dump="dump/test${ntest}.lldump"
 
-rm -f "test${ntest}.lldump"
+rm -f "${dump}"
 make llpipe
 make run_blade.native
 
 echo
 echo "=== running test${ntest}nb"
-echo "ast:" >> "test${ntest}.lldump"
-echo >> "test${ntest}.lldump"
-cat "test/test${ntest}.txt" >> "test${ntest}.lldump"
+echo "ast:" >> "${dump}"
+echo >> "${dump}"
+cat "test/test${ntest}.txt" >> "${dump}"
 ./llpipe.native -o "test${ntest}nb" "test/test${ntest}.txt" &> /dev/null
 make "test${ntest}nb" &> /dev/null
-./llrun -avg 100 "test${ntest}nb" >> "test${ntest}.lldump"
+./llrun -avg 100 "test${ntest}nb" >> "${dump}"
 echo "=== test${ntest}nb ended"
 
 echo
 echo "=== running test${ntest}bs"
-echo >> "test${ntest}.lldump"
-echo >> "test${ntest}.lldump"
-./run_blade.native --weights ${weight} "test/test${ntest}.txt" >> "test${ntest}.lldump" 
+echo >> "${dump}"
+echo >> "${dump}"
+./run_blade.native --weights ${weight} "test/test${ntest}.txt" >> "${dump}" 
 ./llpipe.native --blade --weights ${weight} -o "test${ntest}bs" "test/test${ntest}.txt" &> /dev/null
 make "test${ntest}bs" &> /dev/null
-./llrun -avg 100 "test${ntest}bs" >> "test${ntest}.lldump"
+./llrun -avg 100 "test${ntest}bs" >> "${dump}"
 echo "=== test${ntest}bs ended"
 
 echo
 echo "=== running test${ntest}bf"
-echo >> "test${ntest}.lldump"
-echo >> "test${ntest}.lldump"
-./run_blade.native "test/test${ntest}.txt" >> "test${ntest}.lldump" 
+echo >> "${dump}"
+echo >> "${dump}"
+./run_blade.native "test/test${ntest}.txt" >> "${dump}" 
 ./llpipe.native --blade -o "test${ntest}bf" "test/test${ntest}.txt" &> /dev/null
 make "test${ntest}bf" &> /dev/null
-./llrun -avg 10 "test${ntest}bf" >> "test${ntest}.lldump"
+./llrun -avg 10 "test${ntest}bf" >> "${dump}"
 echo "=== test${ntest}bf ended"
 
